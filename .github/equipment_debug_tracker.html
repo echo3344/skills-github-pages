@@ -1,0 +1,902 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>单品线设备调试阶段进度及问题管理清单</title>
+<style>
+  :root {
+    --primary: #1a7a4a;
+    --primary-light: #2a9a6a;
+    --header-bg: #17966b;
+    --border: #b2d8c8;
+    --text: #1a1a1a;
+    --text-light: #555;
+    --status-problem: #e74c3c;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'PingFang SC', 'Microsoft YaHei', 'Helvetica Neue', Arial, sans-serif;
+    background: #f0f7f3;
+    color: var(--text);
+    padding: 24px;
+  }
+
+  /* ── 页面标题 ── */
+  .page-header {
+    background: linear-gradient(135deg, var(--primary), var(--primary-light));
+    color: white;
+    padding: 28px 36px;
+    border-radius: 16px;
+    margin-bottom: 28px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .page-header h1 { font-size: 22px; font-weight: 700; letter-spacing: 1px; }
+  .page-header .subtitle { font-size: 13px; opacity: 0.85; margin-top: 6px; }
+  .page-header .status-badge {
+    background: rgba(255,255,255,0.2);
+    border: 1px solid rgba(255,255,255,0.4);
+    padding: 6px 16px;
+    border-radius: 20px;
+    font-size: 13px;
+  }
+
+  /* ── 通用卡片 ── */
+  .card {
+    background: white;
+    border-radius: 14px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+    margin-bottom: 24px;
+    overflow: hidden;
+  }
+  .card-header {
+    background: var(--header-bg);
+    color: white;
+    padding: 14px 24px;
+    font-size: 15px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .card-header .icon { font-size: 18px; }
+  .card-header .hint {
+    margin-left: auto;
+    font-size: 12px;
+    opacity: 0.8;
+    font-weight: 400;
+  }
+
+  /* ── 可编辑字段通用 ── */
+  [contenteditable] {
+    outline: none;
+    border-radius: 4px;
+    padding: 2px 4px;
+    min-width: 20px;
+    display: inline-block;
+    transition: background 0.2s, box-shadow 0.2s;
+    cursor: text;
+  }
+  [contenteditable]:hover {
+    background: #f0fff4;
+    box-shadow: 0 0 0 2px rgba(23,150,107,0.2);
+  }
+  [contenteditable]:focus {
+    background: #ffffff;
+    box-shadow: 0 0 0 2px rgba(23,150,107,0.5);
+    outline: 2px solid var(--primary);
+    outline-offset: 0;
+  }
+  [contenteditable]:empty::before {
+    content: attr(data-placeholder);
+    color: #aaa;
+    pointer-events: none;
+  }
+
+  /* ══════════════════════════════════════════════
+     甘特图区域
+  ══════════════════════════════════════════════ */
+  .gantt-config {
+    display: flex;
+    gap: 12px;
+    padding: 12px 24px;
+    background: #f0faf4;
+    border-bottom: 1px solid #e8f0ec;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+  .gantt-config label {
+    font-size: 12px;
+    color: var(--text-light);
+    white-space: nowrap;
+  }
+  .gantt-config input[type="date"] {
+    padding: 5px 10px;
+    border: 1.5px solid var(--border);
+    border-radius: 6px;
+    font-size: 12px;
+    font-family: inherit;
+    outline: none;
+    background: white;
+    transition: border-color 0.2s;
+  }
+  .gantt-config input[type="date"]:focus { border-color: var(--primary); }
+  .gantt-config .sep { font-size: 12px; color: #aaa; }
+  .gantt-config .hint { font-size: 11px; color: #aaa; margin-left: 4px; }
+
+  /* 甘特图表格容器 — 横向滚动 */
+  .gantt-scroll-wrapper {
+    overflow-x: auto;
+    padding: 0;
+  }
+
+  /* 甘特图表格 */
+  table.gantt-table {
+    border-collapse: collapse;
+    font-size: 13px;
+    /* 固定列宽，序号+类型+名称+开始+结束+状态+操作 固定，
+       甘特条列自动填充剩余空间 */
+    table-layout: fixed;
+    width: 100%;
+    min-width: 860px; /* 避免极端压缩 */
+  }
+
+  table.gantt-table thead tr {
+    background: var(--header-bg);
+    color: white;
+  }
+
+  table.gantt-table th {
+    padding: 11px 10px;
+    text-align: center;
+    font-weight: 600;
+    font-size: 12px;
+    border-right: 1px solid rgba(255,255,255,0.15);
+    white-space: nowrap;
+  }
+  table.gantt-table th:last-child { border-right: none; }
+
+  /* 列宽分配 */
+  .gantt-col-seq     { width: 44px; }   /* 序号 */
+  .gantt-col-type    { width: 50px; }   /* 类型图标 */
+  .gantt-col-name    { width: 180px; }  /* 阶段名称 */
+  .gantt-col-date    { width: 108px; }  /* 日期 */
+  .gantt-col-bar     { width: auto; }   /* 甘特条 — 填满 */
+  .gantt-col-status  { width: 88px; }  /* 状态 */
+  .gantt-col-action  { width: 64px; }   /* 操作 */
+
+  table.gantt-table tbody tr {
+    border-bottom: 1px solid #e8f0ec;
+    transition: background 0.15s;
+  }
+  table.gantt-table tbody tr:hover { background: #f8fdf9; }
+  table.gantt-table tbody tr:nth-child(even) { background: #fafdfb; }
+  table.gantt-table tbody tr:nth-child(even):hover { background: #f0faf4; }
+
+  table.gantt-table td {
+    padding: 9px 10px;
+    border-right: 1px solid #e8f0ec;
+    vertical-align: middle;
+    overflow: hidden;
+  }
+  table.gantt-table td:last-child { border-right: none; }
+
+  /* 阶段名称行 */
+  .phase-name-wrap {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .phase-tag {
+    display: inline-block;
+    padding: 2px 7px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 600;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .tag-phase { background: #e8f5ef; color: var(--primary); }
+  .tag-milestone { background: #fff3e0; color: #e67e22; }
+
+  /* 日期输入 */
+  .date-input {
+    width: 100%;
+    padding: 4px 6px;
+    border: 1.5px solid var(--border);
+    border-radius: 6px;
+    font-size: 12px;
+    font-family: inherit;
+    outline: none;
+    background: #f8fdf9;
+    transition: border-color 0.2s;
+    text-align: center;
+  }
+  .date-input:focus { border-color: var(--primary); background: white; }
+
+  /* 甘特条容器 TD */
+  .gantt-bar-cell {
+    position: relative;
+    height: 44px;
+    padding: 0 4px !important;
+    overflow: visible;
+  }
+
+  /* 甘特条 */
+  .gantt-bar {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    height: 26px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    padding: 0 8px;
+    font-size: 10px;
+    color: white;
+    white-space: nowrap;
+    overflow: hidden;
+    font-weight: 500;
+    cursor: default;
+    transition: filter 0.2s;
+    min-width: 36px;
+    /* 左上右下的阴影 */
+    box-shadow: 1px 1px 4px rgba(0,0,0,0.15);
+  }
+  .gantt-bar:hover { filter: brightness(1.1); }
+  .bar-phase    { background: linear-gradient(90deg,#27ae60,#2ecc71); }
+  .bar-inprogress { background: linear-gradient(90deg,#2980b9,#3498db); }
+  .bar-milestone { background: linear-gradient(90deg,#e67e22,#f39c12); border-radius: 4px; }
+
+  /* 状态选择 */
+  .status-select {
+    width: 100%;
+    padding: 4px 6px;
+    border: 1.5px solid var(--border);
+    border-radius: 6px;
+    font-size: 12px;
+    font-family: inherit;
+    outline: none;
+    background: #f8fdf9;
+    cursor: pointer;
+  }
+  .status-select:focus { border-color: var(--primary); }
+
+  /* 操作按钮 */
+  .btn-del {
+    padding: 3px 8px;
+    background: white;
+    color: #e74c3c;
+    border: 1.5px solid #e74c3c;
+    border-radius: 6px;
+    font-size: 11px;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+  }
+  .btn-del:hover { background: #e74c3c; color: white; }
+
+  /* 图例 + 新增按钮 */
+  .gantt-footer {
+    display: flex;
+    gap: 0;
+    border-top: 2px solid var(--border);
+    flex-wrap: wrap;
+  }
+  .gantt-legend {
+    display: flex;
+    gap: 16px;
+    padding: 12px 24px;
+    background: #f8fdf9;
+    flex-wrap: wrap;
+    flex: 1;
+  }
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--text-light);
+  }
+  .legend-bar { width: 26px; height: 13px; border-radius: 4px; flex-shrink: 0; }
+  .legend-diamond { width: 10px; height: 10px; transform: rotate(45deg); background: #e67e22; flex-shrink: 0; }
+  .gantt-add-btns {
+    display: flex;
+    gap: 8px;
+    padding: 10px 24px;
+    align-items: center;
+    flex-wrap: wrap;
+    background: #f8fdf9;
+  }
+
+  /* 通用按钮 */
+  .btn {
+    padding: 7px 16px;
+    background: var(--primary);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 13px;
+    cursor: pointer;
+    transition: background 0.2s;
+    white-space: nowrap;
+  }
+  .btn:hover { background: var(--primary-light); }
+  .btn-outline {
+    background: white;
+    color: var(--primary);
+    border: 1.5px solid var(--primary);
+  }
+  .btn-outline:hover { background: #e8f5ef; }
+  .btn-sm { padding: 5px 12px; font-size: 12px; }
+
+  /* ══════════════════════════════════════════════
+     问题台账区域
+  ══════════════════════════════════════════════ */
+  .issue-controls {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 16px 24px;
+    border-bottom: 1px solid #e8f0ec;
+    flex-wrap: wrap;
+  }
+  .issue-table-wrapper { overflow-x: auto; padding: 0; }
+
+  table.issue-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  table.issue-table thead tr { background: var(--header-bg); color: white; }
+  table.issue-table th {
+    padding: 12px 14px;
+    text-align: center;
+    font-weight: 600;
+    font-size: 13px;
+    border-right: 1px solid rgba(255,255,255,0.15);
+    white-space: nowrap;
+  }
+  table.issue-table th:last-child { border-right: none; }
+  table.issue-table tbody tr {
+    border-bottom: 1px solid #e8f0ec;
+    transition: background 0.15s;
+  }
+  table.issue-table tbody tr:hover { background: #f0faf4; }
+  table.issue-table tbody tr:nth-child(even) { background: #fafdfb; }
+  table.issue-table tbody tr:nth-child(even):hover { background: #f0faf4; }
+  table.issue-table td {
+    padding: 11px 14px;
+    text-align: center;
+    border-right: 1px solid #e8f0ec;
+    vertical-align: middle;
+  }
+  table.issue-table td:last-child { border-right: none; }
+  table.issue-table td:first-child { font-weight: 600; color: var(--text-light); }
+
+  .status-badge-sm {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 600;
+  }
+  .status-待处理 { background: #fff3cd; color: #856404; }
+  .status-处理中 { background: #d1ecf1; color: #0c5460; }
+  .status-已解决 { background: #d4edda; color: #155724; }
+  .status-已关闭 { background: #e2e3e5; color: #383d41; }
+  .status-延期 { background: #f8d7da; color: #721c24; }
+
+  .priority { font-weight: 600; }
+  .priority-H { color: #e74c3c; }
+  .priority-M { color: #e67e22; }
+  .priority-L { color: #27ae60; }
+
+  .add-row-form {
+    display: flex;
+    gap: 8px;
+    padding: 14px 24px;
+    background: #f8fdf9;
+    border-top: 2px solid var(--border);
+    flex-wrap: wrap;
+    align-items: center;
+  }
+  .add-row-form input,
+  .add-row-form select {
+    padding: 7px 12px;
+    border: 1.5px solid var(--border);
+    border-radius: 8px;
+    font-size: 12px;
+    outline: none;
+    background: white;
+    transition: border-color 0.2s;
+    min-width: 110px;
+  }
+  .add-row-form input:focus,
+  .add-row-form select:focus { border-color: var(--primary); }
+  .add-row-form .form-label { font-size: 12px; color: var(--text-light); white-space: nowrap; }
+
+  .summary-bar { display: flex; gap: 0; border-top: 1px solid var(--border); }
+  .summary-item {
+    flex: 1;
+    padding: 12px 16px;
+    text-align: center;
+    border-right: 1px solid var(--border);
+    font-size: 12px;
+    color: var(--text-light);
+  }
+  .summary-item:last-child { border-right: none; }
+  .summary-item .num {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--primary);
+    display: block;
+    margin-bottom: 2px;
+  }
+  .summary-item .num.red { color: var(--status-problem); }
+  .summary-item .num.orange { color: #e67e22; }
+
+  .empty-state {
+    text-align: center;
+    padding: 40px;
+    color: var(--text-light);
+    font-size: 14px;
+  }
+  .empty-state .icon { font-size: 36px; margin-bottom: 10px; display: block; }
+
+  @media (max-width: 768px) {
+    body { padding: 12px; }
+    .page-header { padding: 20px; }
+    .page-header h1 { font-size: 18px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- 页面标题 -->
+<div class="page-header">
+  <div>
+    <h1>📦 单品线设备调试阶段进度及问题管理清单</h1>
+    <div class="subtitle">黄冈物流仓 · 设备综合组 · 2026年调试阶段</div>
+  </div>
+  <div class="status-badge">🟢 调试中</div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     第一部分：甘特图（可编辑）
+  ══════════════════════════════════════════════ -->
+<div class="card">
+  <div class="card-header">
+    <span class="icon">📊</span>
+    <span>调试进度甘特图</span>
+    <span class="hint">✏️ 点击文字/日期即可直接编辑</span>
+  </div>
+
+  <!-- 时间范围配置 -->
+  <div class="gantt-config">
+    <label>时间范围：</label>
+    <input type="date" id="rangeStart" value="2026-05-01">
+    <span class="sep">至</span>
+    <input type="date" id="rangeEnd" value="2026-09-30">
+    <button class="btn btn-outline btn-sm" onclick="renderGantt()">🔄 更新甘特条</button>
+    <span class="hint">修改日期后点击按钮刷新甘特条位置</span>
+  </div>
+
+  <!-- 甘特图表格（横向滚动） -->
+  <div class="gantt-scroll-wrapper">
+    <table class="gantt-table" id="ganttTable">
+      <thead>
+        <tr>
+          <th class="gantt-col-seq">序号</th>
+          <th class="gantt-col-type">类型</th>
+          <th class="gantt-col-name">阶段 / 里程碑名称</th>
+          <th class="gantt-col-date">开始日期</th>
+          <th class="gantt-col-date">结束日期</th>
+          <th class="gantt-col-bar">甘特条（自动生成）</th>
+          <th class="gantt-col-status">状态</th>
+          <th class="gantt-col-action">操作</th>
+        </tr>
+      </thead>
+      <tbody id="ganttTableBody"></tbody>
+    </table>
+  </div>
+
+  <!-- 图例 + 新增按钮 -->
+  <div class="gantt-footer">
+    <div class="gantt-legend">
+      <div class="legend-item">
+        <div class="legend-bar" style="background:linear-gradient(90deg,#27ae60,#2ecc71)"></div>
+        计划阶段
+      </div>
+      <div class="legend-item">
+        <div class="legend-bar" style="background:linear-gradient(90deg,#2980b9,#3498db)"></div>
+        进行中
+      </div>
+      <div class="legend-item">
+        <div class="legend-diamond"></div>
+        里程碑节点
+      </div>
+    </div>
+    <div class="gantt-add-btns">
+      <button class="btn btn-sm" onclick="addGanttPhase()">➕ 新增阶段</button>
+      <button class="btn btn-outline btn-sm" onclick="addGanttMilestone()">⭐ 新增里程碑</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     第二部分：问题登记台账
+  ══════════════════════════════════════════════ -->
+<div class="card">
+  <div class="card-header">
+    <span class="icon">🔧</span>
+    <span>设备问题登记台账</span>
+    <span class="hint">按照片格式生成 · 支持在线添加</span>
+  </div>
+
+  <!-- 汇总统计 -->
+  <div class="summary-bar">
+    <div class="summary-item">
+      <span class="num" id="totalCount">0</span>问题总数
+    </div>
+    <div class="summary-item">
+      <span class="num red" id="highCount">0</span>🔴 高优先级
+    </div>
+    <div class="summary-item">
+      <span class="num orange" id="midCount">0</span>🟡 中优先级
+    </div>
+    <div class="summary-item">
+      <span class="num" id="resolvedCount">0</span>✅ 已解决
+    </div>
+    <div class="summary-item">
+      <span class="num" id="openCount">0</span>⏳ 待处理
+    </div>
+  </div>
+
+  <!-- 筛选 -->
+  <div class="issue-controls">
+    <label class="form-label">🔍 筛选：</label>
+    <select id="filterStatus" onchange="renderIssueTable()">
+      <option value="all">全部状态</option>
+      <option value="待处理">待处理</option>
+      <option value="处理中">处理中</option>
+      <option value="已解决">已解决</option>
+      <option value="已关闭">已关闭</option>
+      <option value="延期">延期</option>
+    </select>
+    <select id="filterPriority" onchange="renderIssueTable()">
+      <option value="all">全部优先级</option>
+      <option value="H">🔴 高</option>
+      <option value="M">🟡 中</option>
+      <option value="L">🟢 低</option>
+    </select>
+    <button class="btn btn-outline btn-sm" onclick="clearFilters()">🔄 清除筛选</button>
+  </div>
+
+  <!-- 问题表格 -->
+  <div class="issue-table-wrapper">
+    <table class="issue-table" id="issueTable">
+      <thead>
+        <tr>
+          <th style="width:50px;">序号</th>
+          <th style="width:120px;">设备名称</th>
+          <th style="width:90px;">问题类型</th>
+          <th style="min-width:200px;">问题描述</th>
+          <th style="width:80px;">优先级</th>
+          <th style="width:90px;">问题状态</th>
+          <th style="width:90px;">负责人</th>
+          <th style="min-width:100px;">备注</th>
+          <th style="width:70px;">操作</th>
+        </tr>
+      </thead>
+      <tbody id="issueTableBody"></tbody>
+    </table>
+    <div class="empty-state" id="emptyState" style="display:none;">
+      <span class="icon">📭</span>
+      暂无符合条件的问题记录
+    </div>
+  </div>
+
+  <!-- 新增行表单 -->
+  <div class="add-row-form">
+    <span class="form-label" style="font-weight:600;color:var(--primary);">➕ 新增问题记录：</span>
+    <input type="text" id="newDevice" placeholder="设备名称">
+    <select id="newType">
+      <option value="">类型</option>
+      <option>机械故障</option>
+      <option>电气故障</option>
+      <option>软件/控制</option>
+      <option>安全隐患</option>
+      <option>安装问题</option>
+      <option>其他</option>
+    </select>
+    <input type="text" id="newDesc" placeholder="问题描述" style="min-width:200px;">
+    <select id="newPriority">
+      <option value="M">🟡 中</option>
+      <option value="H">🔴 高</option>
+      <option value="L">🟢 低</option>
+    </select>
+    <select id="newStatus">
+      <option value="待处理">待处理</option>
+      <option value="处理中">处理中</option>
+      <option value="已解决">已解决</option>
+      <option value="已关闭">已关闭</option>
+      <option value="延期">延期</option>
+    </select>
+    <input type="text" id="newOwner" placeholder="负责人">
+    <input type="text" id="newNote" placeholder="备注">
+    <button class="btn btn-sm" onclick="addIssueRow()">✅ 添加</button>
+  </div>
+</div>
+
+<script>
+  // ══════════════════════════════════════════════
+  //  甘特图数据
+  // ══════════════════════════════════════════════
+  let ganttData = [
+    { id:1, type:'phase',     name:'设备进场与安装', start:'2026-05-01', end:'2026-05-20', status:'已完成' },
+    { id:2, type:'phase',     name:'单机调试',       start:'2026-05-20', end:'2026-06-30', status:'进行中' },
+    { id:3, type:'phase',     name:'联动空载调试',   start:'2026-06-15', end:'2026-08-05', status:'计划' },
+    { id:4, type:'phase',     name:'联动带载调试',   start:'2026-07-01', end:'2026-08-25', status:'计划' },
+    { id:5, type:'phase',     name:'试运行与验收',   start:'2026-08-15', end:'2026-09-30', status:'计划' },
+    { id:6, type:'milestone', name:'安装验收节点',   start:'2026-05-20', end:'2026-05-20', status:'已完成' },
+    { id:7, type:'milestone', name:'空载调试完成',   start:'2026-08-05', end:'2026-08-05', status:'计划' },
+    { id:8, type:'milestone', name:'满载调试完成',   start:'2026-08-25', end:'2026-08-25', status:'计划' },
+    { id:9, type:'milestone', name:'项目终验节点',   start:'2026-09-30', end:'2026-09-30', status:'计划' },
+  ];
+  let ganttNextId = 10;
+
+  // 计算甘特条位置（基于 TD 实际像素宽度，动态读取）
+  function calcBarStyle(start, end, tdElement) {
+    const rangeStart = document.getElementById('rangeStart').value;
+    const rangeEnd   = document.getElementById('rangeEnd').value;
+    if (!rangeStart || !end) return { left:'0px', width:'40px', text:'' };
+
+    const totalMs    = new Date(rangeEnd) - new Date(rangeStart);
+    const startMs    = new Date(start) - new Date(rangeStart);
+    const endMs      = new Date(end) - new Date(rangeStart);
+    const durationMs = new Date(end) - new Date(start);
+
+    if (totalMs <= 0) return { left:'0px', width:'40px', text:'' };
+
+    // 用实际 TD 宽度计算（padding 8px = 0.5rem 粗估，实际由JS读取）
+    const PAD = 8;
+    const availWidth = tdElement ? (tdElement.offsetWidth - PAD * 2) : 400;
+
+    const leftPct  = Math.max(0, startMs / totalMs) * 100;
+    const endPct   = Math.min(1, endMs / totalMs) * 100;
+    const widthPct = Math.max(4, endPct - leftPct); // 至少4%
+
+    const leftPx  = (leftPct / 100 * availWidth).toFixed(0);
+    const widthPx = Math.max(36, (widthPct / 100 * availWidth)).toFixed(0);
+
+    return {
+      left: leftPx + 'px',
+      width: widthPx + 'px',
+      text: start + ' ~ ' + end
+    };
+  }
+
+  // 渲染甘特图
+  function renderGantt() {
+    const tbody = document.getElementById('ganttTableBody');
+    tbody.innerHTML = ganttData.map((item, idx) => {
+      const tagClass = item.type === 'milestone' ? 'tag-milestone' : 'tag-phase';
+      const tagIcon  = item.type === 'milestone' ? '⭐' : '📋';
+      const tagLabel = item.type === 'milestone' ? '里程碑' : '阶段' + (idx + 1);
+
+      return `<tr>
+        <td class="gantt-col-seq">${idx + 1}</td>
+        <td class="gantt-col-type">
+          <span class="phase-tag ${tagClass}" style="padding:2px 5px;font-size:10px;">${tagIcon}</span>
+        </td>
+        <td class="gantt-col-name">
+          <div class="phase-name-wrap">
+            <span class="phase-tag ${tagClass}">${tagLabel}</span>
+            <span contenteditable="true"
+                  data-field="name"
+                  data-id="${item.id}"
+                  data-placeholder="输入名称"
+                  onblur="updateGanttField(${item.id},'name',this)"
+                  style="font-size:12px;">${item.name}</span>
+          </div>
+        </td>
+        <td class="gantt-col-date">
+          <input type="date" class="date-input" value="${item.start}"
+                 onchange="updateGanttField(${item.id},'start',this.value)">
+        </td>
+        <td class="gantt-col-date">
+          <input type="date" class="date-input" value="${item.end}"
+                 onchange="updateGanttField(${item.id},'end',this.value)">
+        </td>
+        <td class="gantt-col-bar gantt-bar-cell" data-bar-cell="true">
+          <div class="gantt-bar bar-phase"
+               style="left:0;width:40px;"
+               data-gantt-bar="${item.id}"
+               title="${item.start} ~ ${item.end}"></div>
+        </td>
+        <td class="gantt-col-status">
+          <select class="status-select" onchange="updateGanttField(${item.id},'status',this.value)">
+            <option ${item.status==='计划'?'selected':''}>计划</option>
+            <option ${item.status==='进行中'?'selected':''}>进行中</option>
+            <option ${item.status==='已完成'?'selected':''}>已完成</option>
+            <option ${item.status==='延期'?'selected':''}>延期</option>
+          </select>
+        </td>
+        <td class="gantt-col-action">
+          <button class="btn-del" onclick="deleteGanttRow(${item.id})">🗑️</button>
+        </td>
+      </tr>`;
+    }).join('');
+
+    // 渲染完成后，重新计算甘特条位置
+    requestAnimationFrame(() => updateBars());
+  }
+
+  // 更新所有甘特条位置（基于实际 TD 宽度）
+  function updateBars() {
+    ganttData.forEach(item => {
+      const bar = document.querySelector(`[data-gantt-bar="${item.id}"]`);
+      if (!bar) return;
+      const td = bar.closest('[data-bar-cell]') || bar.parentElement;
+      const style = calcBarStyle(item.start, item.end, td);
+      bar.style.left  = style.left;
+      bar.style.width = style.width;
+      bar.title = style.text;
+
+      // 里程碑样式
+      if (item.type === 'milestone') {
+        bar.className = 'gantt-bar bar-milestone';
+        bar.textContent = '◆ ' + (item.name || '');
+      } else {
+        bar.className = 'gantt-bar ' + (item.status === '进行中' ? 'bar-inprogress' : 'bar-phase');
+        bar.textContent = style.text;
+      }
+    });
+  }
+
+  // 更新字段
+  function updateGanttField(id, field, value) {
+    const item = ganttData.find(i => i.id === id);
+    if (!item) return;
+    if (field === 'name') {
+      item.name = value.innerText || value;
+    } else {
+      item[field] = value;
+    }
+    if (field === 'start' || field === 'end') {
+      requestAnimationFrame(() => updateBars());
+    }
+  }
+
+  // 删除行
+  function deleteGanttRow(id) {
+    if (!confirm('确认删除此行？')) return;
+    ganttData = ganttData.filter(i => i.id !== id);
+    renderGantt();
+  }
+
+  // 新增阶段
+  function addGanttPhase() {
+    const rangeStart = document.getElementById('rangeStart').value || '2026-05-01';
+    const d = new Date(rangeStart);
+    d.setDate(d.getDate() + 15);
+    ganttData.push({
+      id: ganttNextId++,
+      type: 'phase',
+      name: '新阶段名称',
+      start: rangeStart,
+      end: d.toISOString().slice(0, 10),
+      status: '计划'
+    });
+    renderGantt();
+  }
+
+  // 新增里程碑
+  function addGanttMilestone() {
+    const rangeStart = document.getElementById('rangeStart').value || '2026-05-01';
+    ganttData.push({
+      id: ganttNextId++,
+      type: 'milestone',
+      name: '新里程碑',
+      start: rangeStart,
+      end: rangeStart,
+      status: '计划'
+    });
+    renderGantt();
+  }
+
+  // ══════════════════════════════════════════════
+  //  问题台账数据
+  // ══════════════════════════════════════════════
+  let issues = [
+    {id:1, device:"皮带输送线A",  type:"机械故障",  desc:"驱动电机轴承异响，已安排检修",           priority:"H", status:"处理中", owner:"张师傅", note:"备件已申请"},
+    {id:2, device:"扫码工作站#1", type:"软件/控制", desc:"读码率低于95%标准，标签贴合角度问题",    priority:"M", status:"处理中", owner:"李工",   note:"调整传感器参数"},
+    {id:3, device:"称重校验台",   type:"电气故障",  desc:"称重传感器数据漂移±200g",                priority:"H", status:"待处理", owner:"王师傅", note:"需厂家支持"},
+    {id:4, device:"打包台#3",     type:"机械故障",  desc:"热熔刀温度控制不稳定",                   priority:"M", status:"已解决", owner:"张师傅", note:"已更换温控模块"},
+    {id:5, device:"分拣机入口",   type:"安装问题",  desc:"光电开关安装位置偏差导致漏扫",           priority:"M", status:"已解决", owner:"李工",   note:""},
+    {id:6, device:"AGV充电桩#2",  type:"电气故障",  desc:"充电触点氧化，接触不良",                priority:"L", status:"已关闭", owner:"刘师傅", note:""},
+  ];
+  let issueNextId = 7;
+
+  function renderIssueTable() {
+    const statusFilter   = document.getElementById('filterStatus').value;
+    const priorityFilter = document.getElementById('filterPriority').value;
+    let filtered = issues.filter(item => {
+      const s = statusFilter   === 'all' || item.status   === statusFilter;
+      const p = priorityFilter === 'all' || item.priority === priorityFilter;
+      return s && p;
+    });
+
+    const tbody    = document.getElementById('issueTableBody');
+    const empty    = document.getElementById('emptyState');
+    if (filtered.length === 0) {
+      empty.style.display = 'block';
+      tbody.innerHTML = '';
+    } else {
+      empty.style.display = 'none';
+      tbody.innerHTML = filtered.map(item => {
+        const priCls = item.priority==='H'?'priority-H':item.priority==='M'?'priority-M':'priority-L';
+        const priLbl = item.priority==='H'?'🔴 高':item.priority==='M'?'🟡 中':'🟢 低';
+        const stCls  = `status-${item.status}`;
+        return `<tr>
+          <td>${item.id}</td>
+          <td>${item.device}</td>
+          <td>${item.type}</td>
+          <td style="text-align:left;max-width:300px;">${item.desc}</td>
+          <td><span class="priority ${priCls}">${priLbl}</span></td>
+          <td><span class="status-badge-sm ${stCls}">${item.status}</span></td>
+          <td>${item.owner}</td>
+          <td style="text-align:left;">${item.note}</td>
+          <td><button class="btn-del" onclick="deleteIssueRow(${item.id})" style="padding:3px 8px;font-size:11px;">🗑️</button></td>
+        </tr>`;
+      }).join('');
+    }
+    document.getElementById('totalCount').textContent    = issues.length;
+    document.getElementById('highCount').textContent     = issues.filter(i=>i.priority==='H').length;
+    document.getElementById('midCount').textContent      = issues.filter(i=>i.priority==='M').length;
+    document.getElementById('resolvedCount').textContent  = issues.filter(i=>i.status==='已解决'||i.status==='已关闭').length;
+    document.getElementById('openCount').textContent     = issues.filter(i=>i.status==='待处理'||i.status==='处理中'||i.status==='延期').length;
+  }
+
+  function addIssueRow() {
+    const fields = {
+      device:   document.getElementById('newDevice').value.trim(),
+      type:     document.getElementById('newType').value,
+      desc:     document.getElementById('newDesc').value.trim(),
+      priority: document.getElementById('newPriority').value,
+      status:   document.getElementById('newStatus').value,
+      owner:    document.getElementById('newOwner').value.trim(),
+      note:     document.getElementById('newNote').value.trim(),
+    };
+    if (!fields.device || !fields.desc) { alert('请填写设备名称和问题描述！'); return; }
+    issues.push({ id: issueNextId++, ...fields });
+    ['newDevice','newType','newDesc','newOwner','newNote'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('newPriority').value = 'M';
+    document.getElementById('newStatus').value   = '待处理';
+    renderIssueTable();
+  }
+
+  function deleteIssueRow(id) {
+    if (!confirm('确认删除序号 ' + id + ' 的记录？')) return;
+    issues = issues.filter(i => i.id !== id);
+    renderIssueTable();
+  }
+
+  function clearFilters() {
+    document.getElementById('filterStatus').value   = 'all';
+    document.getElementById('filterPriority').value = 'all';
+    renderIssueTable();
+  }
+
+  // 窗口宽度变化时重新计算甘特条
+  window.addEventListener('resize', () => {
+    requestAnimationFrame(() => updateBars());
+  });
+
+  // 初始化
+  renderGantt();
+  renderIssueTable();
+</script>
+</body>
+</html>
