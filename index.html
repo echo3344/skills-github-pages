@@ -1,1115 +1,730 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>单品线设备调试阶段进度及问题管理清单</title>
-<style>
-  :root {
-    --primary: #1a7a4a;
-    --primary-light: #2a9a6a;
-    --header-bg: #17966b;
-    --border: #b2d8c8;
-    --text: #1a1a1a;
-    --text-light: #555;
-    --status-problem: #e74c3c;
-  }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>单品线设备调试阶段进度及问题管理清单</title>
+    <style>
+        :root {
+            --primary: #1a7a4a;
+            --primary-light: #2a9a6a;
+            --header-bg: #17966b;
+            --border: #b2d8c8;
+            --text: #1a1a1a;
+            --text-light: #555;
+            --status-problem: #e74c3c;
+        }
 
-  * { margin: 0; padding: 0; box-sizing: border-box; }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
 
-  body {
-    font-family: 'PingFang SC', 'Microsoft YaHei', 'Helvetica Neue', Arial, sans-serif;
-    background: #f0f7f3;
-    color: var(--text);
-    padding: 24px;
-  }
+        body {
+            font-family: 'PingFang SC', 'Microsoft YaHei', 'Helvetica Neue', Arial, sans-serif;
+            background: #f0f7f3;
+            color: var(--text);
+            padding: 24px;
+        }
 
-  .page-header {
-    background: linear-gradient(135deg, var(--primary), var(--primary-light));
-    color: white;
-    padding: 28px 36px;
-    border-radius: 16px;
-    margin-bottom: 28px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-  }
-  .page-header h1 { font-size: 22px; font-weight: 700; letter-spacing: 1px; }
-  .page-header .subtitle { font-size: 13px; opacity: 0.85; margin-top: 6px; }
-  .status-badge {
-    background: rgba(255,255,255,0.2);
-    border: 1px solid rgba(255,255,255,0.4);
-    padding: 6px 16px;
-    border-radius: 20px;
-    font-size: 13px;
-  }
-  .github-sync {
-    display: flex;
-    gap: 10px;
-    align-items: center;
-  }
-  .github-input {
-    padding: 6px 10px;
-    border-radius: 6px;
-    border: none;
-    font-size: 12px;
-    width: 160px;
-  }
-  .btn-save {
-    background: #ffffff;
-    color: var(--primary);
-    border: 1px solid #fff;
-    padding: 6px 14px;
-    border-radius: 8px;
-    cursor: pointer;
-    font-size: 13px;
-    transition: all 0.2s;
-  }
-  .btn-save:hover {
-    background: #f0faf4;
-  }
-  .card {
-    background: white;
-    border-radius: 14px;
-    box-shadow: 0 2px 12px rgba(0,0,0,0.06);
-    margin-bottom: 24px;
-    overflow: hidden;
-  }
-  .card-header {
-    background: var(--header-bg);
-    color: white;
-    padding: 14px 24px;
-    font-size: 15px;
-    font-weight: 600;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-  }
-  .card-header .icon { font-size: 18px; }
-  .card-header .hint {
-    margin-left: auto;
-    font-size: 12px;
-    opacity: 0.8;
-    font-weight: 400;
-  }
-  [contenteditable] {
-    outline: none;
-    border-radius: 4px;
-    padding: 2px 4px;
-    min-width: 20px;
-    display: inline-block;
-    transition: background 0.2s, box-shadow 0.2s;
-    cursor: text;
-  }
-  [contenteditable]:hover {
-    background: #f0fff4;
-    box-shadow: 0 0 0 2px rgba(23,150,107,0.2);
-  }
-  [contenteditable]:focus {
-    background: #ffffff;
-    box-shadow: 0 0 0 2px rgba(23,150,107,0.5);
-    outline: 2px solid var(--primary);
-    outline-offset: 0;
-  }
-  [contenteditable]:empty::before {
-    content: attr(data-placeholder);
-    color: #aaa;
-    pointer-events: none;
-  }
-  .gantt-config {
-    display: flex;
-    gap: 12px;
-    padding: 12px 24px;
-    background: #f0faf4;
-    border-bottom: 1px solid #e8f0ec;
-    flex-wrap: wrap;
-    align-items: center;
-  }
-  .gantt-config label {
-    font-size: 12px;
-    color: var(--text-light);
-    white-space: nowrap;
-  }
-  .gantt-config input[type="date"] {
-    padding: 5px 10px;
-    border: 1.5px solid var(--border);
-    border-radius: 6px;
-    font-size: 12px;
-    font-family: inherit;
-    outline: none;
-    background: white;
-    transition: border-color 0.2s;
-  }
-  .gantt-config input[type="date"]:focus { border-color: var(--primary); }
-  .gantt-config .sep { font-size: 12px; color: #aaa; }
-  .gantt-config .hint { font-size: 11px; color: #aaa; margin-left: 4px; }
-  .gantt-scroll-wrapper {
-    overflow-x: auto;
-    padding: 0;
-  }
-  table.gantt-table {
-    border-collapse: collapse;
-    font-size: 13px;
-    table-layout: fixed;
-    width: 100%;
-    min-width: 860px;
-  }
-  table.gantt-table thead tr {
-    background: var(--header-bg);
-    color: white;
-  }
-  table.gantt-table th {
-    padding: 11px 10px;
-    text-align: center;
-    font-weight: 600;
-    font-size: 12px;
-    border-right: 1px solid rgba(255,255,255,0.15);
-    white-space: nowrap;
-  }
-  table.gantt-table th:last-child { border-right: none; }
-  .gantt-col-seq     { width: 44px; }
-  .gantt-col-type    { width: 50px; }
-  .gantt-col-name    { width: 180px; }
-  .gantt-col-date    { width: 108px; }
-  .gantt-col-bar     { width: auto; }
-  .gantt-col-status  { width: 88px; }
-  .gantt-col-action  { width: 64px; }
-  table.gantt-table tbody tr {
-    border-bottom: 1px solid #e8f0ec;
-    transition: background 0.15s;
-  }
-  table.gantt-table tbody tr:hover { background: #f8fdf9; }
-  table.gantt-table tbody tr:nth-child(even) { background: #fafdfb; }
-  table.gantt-table tbody tr:nth-child(even):hover { background: #f0faf4; }
-  table.gantt-table td {
-    padding: 9px 10px;
-    border-right: 1px solid #e8f0ec;
-    vertical-align: middle;
-    overflow: hidden;
-  }
-  table.gantt-table td:last-child { border-right: none; }
-  .phase-name-wrap {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-  }
-  .phase-tag {
-    display: inline-block;
-    padding: 2px 7px;
-    border-radius: 4px;
-    font-size: 11px;
-    font-weight: 600;
-    white-space: nowrap;
-    flex-shrink: 0;
-  }
-  .tag-phase { background: #e8f5ef; color: var(--primary); }
-  .tag-milestone { background: #fff3e0; color: #e67e22; }
-  .date-input {
-    width: 100%;
-    padding: 4px 6px;
-    border: 1.5px solid var(--border);
-    border-radius: 6px;
-    font-size: 12px;
-    font-family: inherit;
-    outline: none;
-    background: #f8fdf9;
-    transition: border-color 0.2s;
-    text-align: center;
-  }
-  .date-input:focus { border-color: var(--primary); background: white; }
-  .gantt-bar-cell {
-    position: relative;
-    height: 44px;
-    padding: 0 4px !important;
-    overflow: visible;
-  }
-  .gantt-bar {
-    position: absolute;
-    top: 50%;
-    transform: translateY(-50%);
-    height: 26px;
-    border-radius: 6px;
-    display: flex;
-    align-items: center;
-    padding: 0 8px;
-    font-size: 10px;
-    color: white;
-    white-space: nowrap;
-    overflow: hidden;
-    font-weight: 500;
-    cursor: default;
-    transition: filter 0.2s;
-    min-width: 36px;
-    box-shadow: 1px 1px 4px rgba(0,0,0,0.15);
-  }
-  .gantt-bar:hover { filter: brightness(1.1); }
-  .bar-phase    { background: linear-gradient(90deg,#27ae60,#2ecc71); }
-  .bar-inprogress { background: linear-gradient(90deg,#2980b9,#3498db); }
-  .bar-milestone { background: linear-gradient(90deg,#e67e22,#f39c12); border-radius: 4px; }
-  .status-select {
-    width: 100%;
-    padding: 4px 6px;
-    border: 1.5px solid var(--border);
-    border-radius: 6px;
-    font-size: 12px;
-    font-family: inherit;
-    outline: none;
-    background: #f8fdf9;
-    cursor: pointer;
-  }
-  .status-select:focus { border-color: var(--primary); }
-  .btn-del {
-    padding: 3px 8px;
-    background: white;
-    color: #e74c3c;
-    border: 1.5px solid #e74c3c;
-    border-radius: 6px;
-    font-size: 11px;
-    cursor: pointer;
-    transition: all 0.2s;
-    white-space: nowrap;
-  }
-  .btn-del:hover { background: #e74c3c; color: white; }
-  .gantt-footer {
-    display: flex;
-    gap: 0;
-    border-top: 2px solid var(--border);
-    flex-wrap: wrap;
-  }
-  .gantt-legend {
-    display: flex;
-    gap: 16px;
-    padding: 12px 24px;
-    background: #f8fdf9;
-    flex-wrap: wrap;
-    flex: 1;
-  }
-  .legend-item {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 12px;
-    color: var(--text-light);
-  }
-  .legend-bar { width: 26px; height: 13px; border-radius: 4px; flex-shrink: 0; }
-  .legend-diamond { width: 10px; height: 10px; transform: rotate(45deg); background: #e67e22; flex-shrink: 0; }
-  .gantt-add-btns {
-    display: flex;
-    gap: 8px;
-    padding: 10px 24px;
-    align-items: center;
-    flex-wrap: wrap;
-    background: #f8fdf9;
-  }
-  .btn {
-    padding: 7px 16px;
-    background: var(--primary);
-    color: white;
-    border: none;
-    border-radius: 8px;
-    font-size: 13px;
-    cursor: pointer;
-    transition: background 0.2s;
-    white-space: nowrap;
-  }
-  .btn:hover { background: var(--primary-light); }
-  .btn-outline {
-    background: white;
-    color: var(--primary);
-    border: 1.5px solid var(--primary);
-  }
-  .btn-outline:hover { background: #e8f5ef; }
-  .btn-sm { padding: 5px 12px; font-size: 12px; }
-  .issue-controls {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 16px 24px;
-    border-bottom: 1px solid #e8f0ec;
-    flex-wrap: wrap;
-  }
-  .issue-table-wrapper { overflow-x: auto; padding: 0; }
-  table.issue-table { width: 100%; border-collapse: collapse; font-size: 13px; }
-  table.issue-table thead tr { background: var(--header-bg); color: white; }
-  table.issue-table th {
-    padding: 12px 14px;
-    text-align: center;
-    font-weight: 600;
-    font-size: 13px;
-    border-right: 1px solid rgba(255,255,255,0.15);
-    white-space: nowrap;
-  }
-  table.issue-table th:last-child { border-right: none; }
-  table.issue-table tbody tr {
-    border-bottom: 1px solid #e8f0ec;
-    transition: background 0.15s;
-  }
-  table.issue-table tbody tr:hover { background: #f0faf4; }
-  table.issue-table tbody tr:nth-child(even) { background: #fafdfb; }
-  table.issue-table tbody tr:nth-child(even):hover { background: #f0faf4; }
-  table.issue-table td {
-    padding: 11px 14px;
-    text-align: center;
-    border-right: 1px solid #e8f0ec;
-    vertical-align: middle;
-  }
-  table.issue-table td:last-child { border-right: none; }
-  table.issue-table td:first-child { font-weight: 600; color: var(--text-light); }
-  .status-badge-sm {
-    display: inline-block;
-    padding: 3px 10px;
-    border-radius: 12px;
-    font-size: 11px;
-    font-weight: 600;
-  }
-  .status-待处理 { background: #fff3cd; color: #856404; }
-  .status-处理中 { background: #d1ecf1; color: #0c5460; }
-  .status-已解决 { background: #d4edda; color: #155724; }
-  .status-已关闭 { background: #e2e3e5; color: #383d41; }
-  .status-延期 { background: #f8d7da; color: #721c24; }
-  .priority { font-weight: 600; }
-  .priority-H { color: #e74c3c; }
-  .priority-M { color: #e67e22; }
-  .priority-L { color: #27ae60; }
-  .add-row-form {
-    display: flex;
-    gap: 8px;
-    padding: 14px 24px;
-    background: #f8fdf9;
-    border-top: 2px solid var(--border);
-    flex-wrap: wrap;
-    align-items: center;
-  }
-  .add-row-form input,
-  .add-row-form select {
-    padding: 7px 12px;
-    border: 1.5px solid var(--border);
-    border-radius: 8px;
-    font-size: 12px;
-    outline: none;
-    background: white;
-    transition: border-color 0.2s;
-    min-width: 110px;
-  }
-  .add-row-form input:focus,
-  .add-row-form select:focus { border-color: var(--primary); }
-  .add-row-form .form-label { font-size: 12px; color: var(--text-light); white-space: nowrap; }
-  .summary-bar { display: flex; gap: 0; border-top: 1px solid var(--border); }
-  .summary-item {
-    flex: 1;
-    padding: 12px 16px;
-    text-align: center;
-    border-right: 1px solid var(--border);
-    font-size: 12px;
-    color: var(--text-light);
-  }
-  .summary-item:last-child { border-right: none; }
-  .summary-item .num {
-    font-size: 20px;
-    font-weight: 700;
-    color: var(--primary);
-    display: block;
-    margin-bottom: 2px;
-  }
-  .summary-item .num.red { color: var(--status-problem); }
-  .summary-item .num.orange { color: #e67e22; }
-  .empty-state {
-    text-align: center;
-    padding: 40px;
-    color: var(--text-light);
-    font-size: 14px;
-  }
-  .empty-state .icon { font-size: 36px; margin-bottom: 10px; display: block; }
-  @media (max-width: 768px) {
-    body { padding: 12px; }
-    .page-header { padding: 20px; flex-direction: column; gap: 15px; align-items: flex-start; }
-    .page-header h1 { font-size: 18px; }
-    .github-sync { width: 100%; flex-wrap: wrap; }
-  }
-</style>
+        .page-header {
+            background: linear-gradient(135deg, var(--primary), var(--primary-light));
+            color: white;
+            padding: 28px 36px;
+            border-radius: 16px;
+            margin-bottom: 28px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 16px;
+        }
+        .page-header h1 { font-size: 22px; font-weight: 700; letter-spacing: 1px; }
+        .page-header .subtitle { font-size: 13px; opacity: 0.85; margin-top: 6px; }
+        .status-badge {
+            background: rgba(255,255,255,0.2);
+            border: 1px solid rgba(255,255,255,0.4);
+            padding: 6px 16px;
+            border-radius: 20px;
+            font-size: 13px;
+        }
+        .github-sync {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .github-input {
+            padding: 6px 10px;
+            border-radius: 6px;
+            border: none;
+            font-size: 12px;
+            width: 160px;
+        }
+        .btn-save {
+            background: #ffffff;
+            color: var(--primary);
+            border: 1px solid #fff;
+            padding: 6px 14px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 13px;
+            transition: all 0.2s;
+        }
+        .btn-save:hover { background: #f0faf4; }
+
+        .card {
+            background: white;
+            border-radius: 14px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+            margin-bottom: 24px;
+            overflow: hidden;
+        }
+        .card-header {
+            background: var(--header-bg);
+            color: white;
+            padding: 14px 24px;
+            font-size: 15px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .card-header .icon { font-size: 18px; }
+        .card-header .hint {
+            margin-left: auto;
+            font-size: 12px;
+            opacity: 0.8;
+            font-weight: 400;
+        }
+
+        [contenteditable] {
+            outline: none;
+            border-radius: 4px;
+            padding: 2px 4px;
+            min-width: 20px;
+            display: inline-block;
+            transition: background 0.2s, box-shadow 0.2s;
+            cursor: text;
+        }
+        [contenteditable]:hover {
+            background: #f0fff4;
+            box-shadow: 0 0 0 2px rgba(23,150,107,0.2);
+        }
+        [contenteditable]:focus {
+            background: #ffffff;
+            box-shadow: 0 0 0 2px rgba(23,150,107,0.5);
+            outline: 2px solid var(--primary);
+        }
+        [contenteditable]:empty::before {
+            content: attr(data-placeholder);
+            color: #aaa;
+            pointer-events: none;
+        }
+
+        .gantt-config {
+            display: flex;
+            gap: 12px;
+            padding: 12px 24px;
+            background: #f0faf4;
+            border-bottom: 1px solid #e8f0ec;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        .gantt-config label {
+            font-size: 12px;
+            color: var(--text-light);
+            white-space: nowrap;
+        }
+        .gantt-config input[type="date"] {
+            padding: 5px 10px;
+            border: 1.5px solid var(--border);
+            border-radius: 6px;
+            font-size: 12px;
+            font-family: inherit;
+            outline: none;
+            background: white;
+            transition: border-color 0.2s;
+        }
+        .gantt-config .sep { font-size: 12px; color: #aaa; }
+        .gantt-config .hint { font-size: 11px; color: #aaa; margin-left: 4px; }
+
+        .gantt-scroll-wrapper { overflow-x: auto; }
+
+        table.gantt-table {
+            border-collapse: collapse;
+            font-size: 13px;
+            table-layout: fixed;
+            width: 100%;
+            min-width: 860px;
+        }
+        table.gantt-table thead tr { background: var(--header-bg); color: white; }
+        table.gantt-table th {
+            padding: 11px 10px;
+            text-align: center;
+            font-weight: 600;
+            font-size: 12px;
+            border-right: 1px solid rgba(255,255,255,0.15);
+            white-space: nowrap;
+        }
+        .gantt-col-seq { width: 44px; }
+        .gantt-col-type { width: 50px; }
+        .gantt-col-name { width: 180px; }
+        .gantt-col-date { width: 108px; }
+        .gantt-col-bar { width: auto; }
+        .gantt-col-status { width: 88px; }
+        .gantt-col-action { width: 64px; }
+
+        table.gantt-table tbody tr { border-bottom: 1px solid #e8f0ec; }
+        table.gantt-table tbody tr:hover { background: #f8fdf9; }
+        table.gantt-table tbody tr:nth-child(even) { background: #fafdfb; }
+        table.gantt-table td {
+            padding: 9px 10px;
+            border-right: 1px solid #e8f0ec;
+            vertical-align: middle;
+            overflow: hidden;
+        }
+        .phase-name-wrap { display: flex; align-items: center; gap: 6px; }
+        .phase-tag {
+            display: inline-block;
+            padding: 2px 7px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+        .tag-phase { background: #e8f5ef; color: var(--primary); }
+        .tag-milestone { background: #fff3e0; color: #e67e22; }
+
+        .date-input {
+            width: 100%;
+            padding: 4px 6px;
+            border: 1.5px solid var(--border);
+            border-radius: 6px;
+            font-size: 12px;
+            text-align: center;
+        }
+        .gantt-bar-cell { position: relative; height: 44px; padding: 0 4px !important; overflow: visible; }
+        .gantt-bar {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            height: 26px;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            padding: 0 8px;
+            font-size: 10px;
+            color: white;
+            white-space: nowrap;
+            font-weight: 500;
+            transition: filter 0.2s;
+            min-width: 36px;
+            box-shadow: 1px 1px 4px rgba(0,0,0,0.15);
+        }
+        .bar-phase { background: linear-gradient(90deg,#27ae60,#2ecc71); }
+        .bar-inprogress { background: linear-gradient(90deg,#2980b9,#3498db); }
+        .bar-milestone { background: linear-gradient(90deg,#e67e22,#f39c12); border-radius: 4px; }
+
+        .status-select {
+            width: 100%;
+            padding: 4px 6px;
+            border: 1.5px solid var(--border);
+            border-radius: 6px;
+            font-size: 12px;
+        }
+        .btn-del {
+            padding: 3px 8px;
+            background: white;
+            color: #e74c3c;
+            border: 1.5px solid #e74c3c;
+            border-radius: 6px;
+            font-size: 11px;
+            cursor: pointer;
+        }
+        .btn-del:hover { background: #e74c3c; color: white; }
+
+        .gantt-footer { display: flex; border-top: 2px solid var(--border); flex-wrap: wrap; }
+        .gantt-legend {
+            display: flex; gap: 16px; padding: 12px 24px;
+            background: #f8fdf9; flex-wrap: wrap; flex: 1;
+        }
+        .legend-item { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-light); }
+        .legend-bar { width: 26px; height: 13px; border-radius: 4px; }
+        .legend-diamond { width: 10px; height: 10px; transform: rotate(45deg); background: #e67e22; }
+
+        .gantt-add-btns { display: flex; gap: 8px; padding: 10px 24px; align-items: center; }
+        .btn {
+            padding: 7px 16px; background: var(--primary);
+            color: white; border: none; border-radius: 8px;
+            font-size: 13px; cursor: pointer; white-space: nowrap;
+        }
+        .btn:hover { background: var(--primary-light); }
+        .btn-outline {
+            background: white; color: var(--primary);
+            border: 1.5px solid var(--primary);
+        }
+        .btn-outline:hover { background: #e8f5ef; }
+        .btn-sm { padding: 5px 12px; font-size: 12px; }
+
+        .issue-controls { display: flex; gap: 10px; padding: 16px 24px; border-bottom: 1px solid #e8f0ec; flex-wrap: wrap; }
+        .issue-table-wrapper { overflow-x: auto; }
+
+        table.issue-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        table.issue-table thead tr { background: var(--header-bg); color: white; }
+        table.issue-table th {
+            padding: 12px 14px; text-align: center; font-weight: 600;
+            border-right: 1px solid rgba(255,255,255,0.15);
+        }
+        table.issue-table td {
+            padding: 11px 14px; text-align: center;
+            border-right: 1px solid #e8f0ec; vertical-align: middle;
+        }
+        .status-badge-sm {
+            display: inline-block; padding: 3px 10px;
+            border-radius: 12px; font-size: 11px; font-weight: 600;
+        }
+        .status-待处理 { background: #fff3cd; color: #856404; }
+        .status-处理中 { background: #d1ecf1; color: #0c5460; }
+        .status-已解决 { background: #d4edda; color: #155724; }
+        .status-已关闭 { background: #e2e3e5; color: #383d41; }
+        .status-延期 { background: #f8d7da; color: #721c24; }
+        .priority-H { color: #e74c3c; font-weight: 600; }
+        .priority-M { color: #e67e22; font-weight: 600; }
+        .priority-L { color: #27ae60; font-weight: 600; }
+
+        .add-row-form {
+            display: flex; gap: 8px; padding: 14px 24px;
+            background: #f8fdf9; border-top: 2px solid var(--border);
+            flex-wrap: wrap; align-items: center;
+        }
+        .add-row-form input, .add-row-form select {
+            padding: 7px 12px; border: 1.5px solid var(--border);
+            border-radius: 8px; font-size: 12px; background: white; min-width: 110px;
+        }
+
+        .summary-bar { display: flex; border-top: 1px solid var(--border); }
+        .summary-item {
+            flex: 1; padding: 12px 16px; text-align: center;
+            border-right: 1px solid var(--border); font-size: 12px; color: var(--text-light);
+        }
+        .summary-item:last-child { border-right: none; }
+        .summary-item .num {
+            font-size: 20px; font-weight: 700; color: var(--primary); display: block;
+        }
+        .summary-item .num.red { color: var(--status-problem); }
+        .summary-item .num.orange { color: #e67e22; }
+
+        .empty-state { text-align: center; padding: 40px; color: var(--text-light); font-size: 14px; }
+        @media (max-width: 768px) {
+            body { padding: 12px; }
+            .page-header { flex-direction: column; align-items: flex-start; }
+        }
+    </style>
 </head>
 <body>
-
 <div class="page-header">
-  <div>
-    <h1>📦 单品线设备调试阶段进度及问题管理清单</h1>
-    <div class="subtitle">黄冈物流仓 · 设备综合组 · 2026年调试阶段</div>
-  </div>
-  <div class="github-sync">
-    <input class="github-input" id="githubToken" placeholder="GitHub Token" type="password">
-    <input class="github-input" id="githubRepo" placeholder="用户名/仓库名">
-    <input class="github-input" id="githubPath" placeholder="保存路径如：index.html">
-    <button class="btn-save" onclick="saveToGitHub()">💾 一键同步到GitHub</button>
-  </div>
-  <div class="status-badge">🟢 调试中</div>
+    <div>
+        <h1>📦 单品线设备调试阶段进度及问题管理清单</h1>
+        <div class="subtitle">黄冈物流仓 · 设备综合组 · 2026年调试阶段</div>
+    </div>
+    <div class="github-sync">
+        <input class="github-input" id="githubToken" placeholder="GitHub Token" type="password">
+        <input class="github-input" id="githubRepo" placeholder="用户名/仓库名">
+        <input class="github-input" id="githubPath" placeholder="保存路径如：index.html">
+        <button class="btn-save" onclick="saveToGitHub()">💾 一键同步到GitHub</button>
+    </div>
+    <div class="status-badge">🟢 调试中</div>
 </div>
 
 <div class="card">
-  <div class="card-header">
-    <span class="icon">📊</span>
-    <span>调试进度甘特图</span>
-    <span class="hint">✏️ 点击文字/日期即可直接编辑</span>
-  </div>
-  <div class="gantt-config">
-    <label>时间范围：</label>
-    <input type="date" id="rangeStart" value="2026-05-01">
-    <span class="sep">至</span>
-    <input type="date" id="rangeEnd" value="2026-09-30">
-    <button class="btn btn-outline btn-sm" onclick="renderGantt()">🔄 更新甘特条</button>
-    <span class="hint">修改日期后点击按钮刷新甘特条位置</span>
-  </div>
-  <div class="gantt-scroll-wrapper">
-    <table class="gantt-table" id="ganttTable">
-      <thead>
-        <tr>
-          <th class="gantt-col-seq">序号</th>
-          <th class="gantt-col-type">类型</th>
-          <th class="gantt-col-name">阶段 / 里程碑名称</th>
-          <th class="gantt-col-date">开始日期</th>
-          <th class="gantt-col-date">结束日期</th>
-          <th class="gantt-col-bar">甘特条（自动生成）</th>
-          <th class="gantt-col-status">状态</th>
-          <th class="gantt-col-action">操作</th>
-        </tr>
-      </thead>
-      <tbody id="ganttTableBody"></tbody>
-    </table>
-  </div>
-  <div class="gantt-footer">
-    <div class="gantt-legend">
-      <div class="legend-item"><div class="legend-bar" style="background:linear-gradient(90deg,#27ae60,#2ecc71)"></div>计划阶段</div>
-      <div class="legend-item"><div class="legend-bar" style="background:linear-gradient(90deg,#2980b9,#3498db)"></div>进行中</div>
-      <div class="legend-item"><div class="legend-diamond"></div>里程碑节点</div>
+    <div class="card-header">
+        <span class="icon">📊</span> <span>调试进度甘特图</span>
+        <span class="hint">✏️ 点击文字/日期即可直接编辑</span>
     </div>
-    <div class="gantt-add-btns">
-      <button class="btn btn-sm" onclick="addGanttPhase()">➕ 新增阶段</button>
-      <button class="btn btn-outline btn-sm" onclick="addGanttMilestone()">⭐ 新增里程碑</button>
+    <div class="gantt-config">
+        <label>时间范围：</label>
+        <input type="date" id="rangeStart" value="2026-05-01">
+        <span class="sep">至</span>
+        <input type="date" id="rangeEnd" value="2026-09-30">
+        <button class="btn btn-outline btn-sm" onclick="renderGantt()">🔄 更新甘特条</button>
+        <span class="hint">修改日期后点击按钮刷新甘特条位置</span>
     </div>
-  </div>
+    <div class="gantt-scroll-wrapper">
+        <table class="gantt-table" id="ganttTable">
+            <thead>
+                <tr>
+                    <th class="gantt-col-seq">序号</th>
+                    <th class="gantt-col-type">类型</th>
+                    <th class="gantt-col-name">阶段 / 里程碑名称</th>
+                    <th class="gantt-col-date">开始日期</th>
+                    <th class="gantt-col-date">结束日期</th>
+                    <th class="gantt-col-bar">甘特条</th>
+                    <th class="gantt-col-status">状态</th>
+                    <th class="gantt-col-action">操作</th>
+                </tr>
+            </thead>
+            <tbody id="ganttTableBody"></tbody>
+        </table>
+    </div>
+    <div class="gantt-footer">
+        <div class="gantt-legend">
+            <div class="legend-item"><div class="legend-bar" style="background:linear-gradient(90deg,#27ae60,#2ecc71)"></div>计划阶段</div>
+            <div class="legend-item"><div class="legend-bar" style="background:linear-gradient(90deg,#2980b9,#3498db)"></div>进行中</div>
+            <div class="legend-item"><div class="legend-diamond"></div>里程碑节点</div>
+        </div>
+        <div class="gantt-add-btns">
+            <button class="btn btn-sm" onclick="addGanttPhase()">➕ 新增阶段</button>
+            <button class="btn btn-outline btn-sm" onclick="addGanttMilestone()">⭐ 新增里程碑</button>
+        </div>
+    </div>
 </div>
 
 <div class="card">
-  <div class="card-header">
-    <span class="icon">🔧</span>
-    <span>设备问题登记台账</span>
-    <span class="hint">按照片格式生成 · 支持在线添加</span>
-  </div>
-  <div class="summary-bar">
-    <div class="summary-item"><span class="num" id="totalCount">0</span>问题总数</div>
-    <div class="summary-item"><span class="num red" id="highCount">0</span>🔴 高优先级</div>
-    <div class="summary-item"><span class="num orange" id="midCount">0</span>🟡 中优先级</div>
-    <div class="summary-item"><span class="num" id="resolvedCount">0</span>✅ 已解决</div>
-    <div class="summary-item"><span class="num" id="openCount">0</span>⏳ 待处理</div>
-  </div>
-  <div class="issue-controls">
-    <label class="form-label">🔍 筛选：</label>
-    <select id="filterStatus" onchange="renderIssueTable()"><option value="all">全部状态</option><option value="待处理">待处理</option><option value="处理中">处理中</option><option value="已解决">已解决</option><option value="已关闭">已关闭</option><option value="延期">延期</option></select>
-    <select id="filterPriority" onchange="renderIssueTable()"><option value="all">全部优先级</option><option value="H">🔴 高</option><option value="M">🟡 中</option><option value="L">🟢 低</option></select>
-    <button class="btn btn-outline btn-sm" onclick="clearFilters()">🔄 清除筛选</button>
-  </div>
-  <div class="issue-table-wrapper">
-    <table class="issue-table" id="issueTable">
-      <thead>
-        <tr>
-          <th style="width:50px;">序号</th>
-          <th style="width:120px;">设备名称</th>
-          <th style="width:90px;">问题类型</th>
-          <th style="min-width:200px;">问题描述</th>
-          <th style="width:80px;">优先级</th>
-          <th style="width:90px;">问题状态</th>
-          <th style="width:90px;">负责人</th>
-          <th style="min-width:100px;">备注</th>
-          <th style="width:70px;">操作</th>
-        </tr>
-      </thead>
-      <tbody id="issueTableBody"></tbody>
-    </table>
-    <div class="empty-state" id="emptyState" style="display:none;"><span class="icon">📭</span>暂无符合条件的问题记录</div>
-  </div>
-  <div class="add-row-form">
-    <span class="form-label" style="font-weight:600;color:var(--primary);">➕ 新增问题记录：</span>
-    <input type="text" id="newDevice" placeholder="设备名称">
-    <select id="newType"><option value="">类型</option><option>机械故障</option><option>电气故障</option><option>软件/控制</option><option>安全隐患</option><option>安装问题</option><option>其他</option></select>
-    <input type="text" id="newDesc" placeholder="问题描述" style="min-width:200px;">
-    <select id="newPriority"><option value="M">🟡 中</option><option value="H">🔴 高</option><option value="L">🟢 低</option></select>
-    <select id="newStatus"><option value="待处理">待处理</option><option value="处理中">处理中</option><option value="已解决">已解决</option><option value="已关闭">已关闭</option><option value="延期">延期</option></select>
-    <input type="text" id="newOwner" placeholder="负责人">
-    <input type="text" id="newNote" placeholder="备注">
-    <button class="btn btn-sm" onclick="addIssueRow()">✅ 添加</button>
-  </div>
+    <div class="card-header">
+        <span class="icon">🔧</span> <span>设备问题登记台账</span>
+        <span class="hint">支持在线添加、筛选、删除</span>
+    </div>
+    <div class="summary-bar">
+        <div class="summary-item"><span class="num" id="totalCount">0</span>问题总数</div>
+        <div class="summary-item"><span class="num red" id="highCount">0</span>🔴 高优先级</div>
+        <div class="summary-item"><span class="num orange" id="midCount">0</span>🟡 中优先级</div>
+        <div class="summary-item"><span class="num" id="resolvedCount">0</span>✅ 已解决</div>
+        <div class="summary-item"><span class="num" id="openCount">0</span>⏳ 待处理</div>
+    </div>
+    <div class="issue-controls">
+        <label>🔍 筛选：</label>
+        <select id="filterStatus" onchange="renderIssueTable()">
+            <option value="all">全部状态</option>
+            <option value="待处理">待处理</option>
+            <option value="处理中">处理中</option>
+            <option value="已解决">已解决</option>
+            <option value="已关闭">已关闭</option>
+            <option value="延期">延期</option>
+        </select>
+        <select id="filterPriority" onchange="renderIssueTable()">
+            <option value="all">全部优先级</option>
+            <option value="H">🔴 高</option>
+            <option value="M">🟡 中</option>
+            <option value="L">🟢 低</option>
+        </select>
+        <button class="btn btn-outline btn-sm" onclick="clearFilters()">🔄 清除筛选</button>
+    </div>
+    <div class="issue-table-wrapper">
+        <table class="issue-table" id="issueTable">
+            <thead>
+                <tr>
+                    <th>序号</th><th>设备名称</th><th>问题类型</th><th>问题描述</th>
+                    <th>优先级</th><th>问题状态</th><th>负责人</th><th>备注</th><th>操作</th>
+                </tr>
+            </thead>
+            <tbody id="issueTableBody"></tbody>
+        </table>
+        <div class="empty-state" id="emptyState" style="display:none;">📭 暂无符合条件的问题记录</div>
+    </div>
+    <div class="add-row-form">
+        <span style="font-weight:600;color:var(--primary);">➕ 新增问题：</span>
+        <input type="text" id="newDevice" placeholder="设备名称">
+        <select id="newType"><option value="">类型</option><option>机械故障</option><option>电气故障</option><option>软件/控制</option><option>安全隐患</option><option>安装问题</option><option>其他</option></select>
+        <input type="text" id="newDesc" placeholder="问题描述" style="min-width:200px;">
+        <select id="newPriority"><option value="M">🟡 中</option><option value="H">🔴 高</option><option value="L">🟢 低</option></select>
+        <select id="newStatus"><option value="待处理">待处理</option><option value="处理中">处理中</option><option value="已解决">已解决</option><option value="已关闭">已关闭</option><option value="延期">延期</option></select>
+        <input type="text" id="newOwner" placeholder="负责人">
+        <input type="text" id="newNote" placeholder="备注">
+        <button class="btn btn-sm" onclick="addIssueRow()">✅ 添加</button>
+    </div>
 </div>
 
 <script>
-  let ganttData = [
-    { id:1, type:'phase', name:'设备进场与安装', start:'2026-05-01', end:'2026-05-20', status:'已完成' },
-    { id:2, type:'phase', name:'单机调试', start:'2026-05-20', end:'2026-06-30', status:'进行中' },
-    { id:3, type:'phase', name:'联动空载调试', start:'2026-06-15', end:'2026-08-05', status:'计划' },
-    { id:4, type:'phase', name:'联动带载调试', start:'2026-07-01', end:'2026-08-25', status:'计划' },
-    { id:5, type:'phase', name:'试运行与验收', start:'2026-08-15', end:'2026-09-30', status:'计划' },
-    { id:6, type:'milestone', name:'安装验收节点', start:'2026-05-20', end:'2026-05-20', status:'已完成' },
-    { id:7, type:'milestone', name:'空载调试完成', start:'2026-08-05', end:'2026-08-05', status:'计划' },
-    { id:8, type:'milestone', name:'满载调试完成', start:'2026-08-25', end:'2026-08-25', status:'计划' },
-    { id:9, type:'milestone', name:'项目终验节点', start:'2026-09-30', end:'2026-09-30', status:'计划' },
-  ];
-  let ganttNextId = 10;
+    // ========== 核心数据 ==========
+    let ganttData = [
+        { id:1, type:'phase', name:'设备进场与安装', start:'2026-05-01', end:'2026-05-20', status:'已完成' },
+        { id:2, type:'phase', name:'单机调试', start:'2026-05-20', end:'2026-06-30', status:'进行中' },
+        { id:3, type:'phase', name:'联动空载调试', start:'2026-06-15', end:'2026-08-05', status:'计划' },
+        { id:4, type:'phase', name:'联动带载调试', start:'2026-07-01', end:'2026-08-25', status:'计划' },
+        { id:5, type:'phase', name:'试运行与验收', start:'2026-08-15', end:'2026-09-30', status:'计划' },
+        { id:6, type:'milestone', name:'安装验收节点', start:'2026-05-20', end:'2026-05-20', status:'已完成' },
+        { id:7, type:'milestone', name:'空载调试完成', start:'2026-08-05', end:'2026-08-05', status:'计划' },
+        { id:8, type:'milestone', name:'满载调试完成', start:'2026-08-25', end:'2026-08-25', status:'计划' },
+        { id:9, type:'milestone', name:'项目终验节点', start:'2026-09-30', end:'2026-09-30', status:'计划' },
+    ];
+    let ganttNextId = 10;
 
-  function calcBarStyle(start, end, tdElement) {
-    const rangeStart = document.getElementById('rangeStart').value;
-    const rangeEnd   = document.getElementById('rangeEnd').value;
-    if (!rangeStart || !end) return { left:'0px', width:'40px', text:'' };
-    const totalMs    = new Date(rangeEnd) - new Date(rangeStart);
-    const startMs    = new Date(start) - new Date(rangeStart);
-    const endMs      = new Date(end) - new Date(rangeStart);
-    if (totalMs <= 0) return { left:'0px', width:'40px', text:'' };
-    const PAD = 8;
-    const availWidth = tdElement ? (tdElement.offsetWidth - PAD * 2) : 400;
-    const leftPct  = Math.max(0, startMs / totalMs) * 100;
-    const endPct   = Math.min(1, endMs / totalMs) * 100;
-    const widthPct = Math.max(4, endPct - leftPct);
-    const leftPx  = (leftPct / 100 * availWidth).toFixed(0);
-    const widthPx = Math.max(36, (widthPct / 100 * availWidth)).toFixed(0);
-    return { left: leftPx + 'px', width: widthPx + 'px', text: start + ' ~ ' + end };
-  }
+    let issues = [
+        { id:1, device:"皮带输送线A", type:"机械故障", desc:"驱动电机轴承异响", priority:"H", status:"处理中", owner:"张师傅", note:"备件已申请" },
+        { id:2, device:"扫码工作站#1", type:"软件/控制", desc:"读码率低于95%", priority:"M", status:"处理中", owner:"李工", note:"调整传感器" },
+        { id:3, device:"称重校验台", type:"电气故障", desc:"传感器数据漂移", priority:"H", status:"待处理", owner:"王师傅", note:"需厂家支持" },
+        { id:4, device:"打包台#3", type:"机械故障", desc:"热熔刀温控不稳", priority:"M", status:"已解决", owner:"张师傅", note:"已更换模块" },
+        { id:5, device:"分拣机入口", type:"安装问题", desc:"光电开关位置偏差", priority:"M", status:"已解决", owner:"李工", note:"" },
+        { id:6, device:"AGV充电桩#2", type:"电气故障", desc:"充电触点氧化", priority:"L", status:"已关闭", owner:"刘师傅", note:"" },
+    ];
+    let issueNextId = 7;
 
-  function renderGantt() {
-    const tbody = document.getElementById('ganttTableBody');
-    tbody.innerHTML = ganttData.map((item, idx) => {
-      const tagClass = item.type === 'milestone' ? 'tag-milestone' : 'tag-phase';
-      const tagIcon  = item.type === 'milestone' ? '⭐' : '📋';
-      const tagLabel = item.type === 'milestone' ? '里程碑' : '阶段' + (idx + 1);
-      return `<tr>
-        <td class="gantt-col-seq">${idx + 1}</td>
-        <td class="gantt-col-type"><span class="phase-tag ${tagClass}" style="padding:2px 5px;font-size:10px;">${tagIcon}</span></td>
-        <td class="gantt-col-name"><div class="phase-name-wrap"><span class="phase-tag ${tagClass}">${tagLabel}</span><span contenteditable="true" data-field="name" data-id="${item.id}" data-placeholder="输入名称" onblur="updateGanttField(${item.id},'name',this)" style="font-size:12px;">${item.name}</span></div></td>
-        <td class="gantt-col-date"><input type="date" class="date-input" value="${item.start}" onchange="updateGanttField(${item.id},'start',this.value)"></td>
-        <td class="gantt-col-date"><input type="date" class="date-input" value="${item.end}" onchange="updateGanttField(${item.id},'end',this.value)"></td>
-        <td class="gantt-col-bar gantt-bar-cell" data-bar-cell="true"><div class="gantt-bar bar-phase" style="left:0;width:40px;" data-gantt-bar="${item.id}" title="${item.start} ~ ${item.end}"></div></td>
-        <td class="gantt-col-status"><select class="status-select" onchange="updateGanttField(${item.id},'status',this.value)"><option ${item.status==='计划'?'selected':''}>计划</option><option ${item.status==='进行中'?'selected':''}>进行中</option><option ${item.status==='已完成'?'selected':''}>已完成</option><option ${item.status==='延期'?'selected':''}>延期</option></select></td>
-        <td class="gantt-col-action"><button class="btn-del" onclick="deleteGanttRow(${item.id})">🗑️</button></td>
-      </tr>`;
-    }).join('');
-    requestAnimationFrame(() => updateBars());
-  }
-
-  function updateBars() {
-    ganttData.forEach(item => {
-      const bar = document.querySelector(`[data-gantt-bar="${item.id}"]`);
-      if (!bar) return;
-      const td = bar.closest('[data-bar-cell]') || bar.parentElement;
-      const style = calcBarStyle(item.start, item.end, td);
-      bar.style.left = style.left; bar.style.width = style.width; bar.title = style.text;
-      if (item.type === 'milestone') { bar.className = 'gantt-bar bar-milestone'; bar.textContent = '◆ ' + (item.name || ''); }
-      else { bar.className = 'gantt-bar ' + (item.status === '进行中' ? 'bar-inprogress' : 'bar-phase'); bar.textContent = style.text; }
-    });
-  }
-
-  function updateGanttField(id, field, value) {
-    const item = ganttData.find(i => i.id === id);
-    if (!item) return;
-    item[field] = field === 'name' ? (value.innerText || value) : value;
-    if (field === 'start' || field === 'end') requestAnimationFrame(() => updateBars());
-  }
-
-  function deleteGanttRow(id) { if (!confirm('确认删除？')) return; ganttData = ganttData.filter(i => i.id !== id); renderGantt(); }
-  function addGanttPhase() {
-    const s = document.getElementById('rangeStart').value || '2026-05-01';
-    const d = new Date(s); d.setDate(d.getDate()+15);
-    ganttData.push({id:ganttNextId++,type:'phase',name:'新阶段',start:s,end:d.toISOString().slice(0,10),status:'计划'}); renderGantt();
-  }
-  function addGanttMilestone() {
-    const s = document.getElementById('rangeStart').value || '2026-05-01';
-    ganttData.push({id:ganttNextId++,type:'milestone',name:'新里程碑',start:s,end:s,status:'计划'}); renderGantt();
-  }
-
-  let issues = [
-    {id:1,device:"皮带输送线A",type:"机械故障",desc:"驱动电机轴承异响，已安排检修",priority:"H",status:"处理中",owner:"张师傅",note:"备件已申请"},
-    {id:2,device:"扫码工作站#1",type:"软件/控制",desc:"读码率低于95%标准，标签贴合角度问题",priority:"M",status:"处理中",owner:"李工",note:"调整传感器参数"},
-    {id:3,device:"称重校验台",type:"电气故障",desc:"称重传感器数据漂移±200g",priority:"H",status:"待处理",owner:"王师傅",note:"需厂家支持"},
-    {id:4,device:"打包台#3",type:"机械故障",desc:"热熔刀温度控制不稳定",priority:"M",status:"已解决",owner:"张师傅",note:"已更换温控模块"},
-    {id:5,device:"分拣机入口",type:"安装问题",desc:"光电开关安装位置偏差导致漏扫",priority:"M",status:"已解决",owner:"李工",note:""},
-    {id:6,device:"AGV充电桩#2",type:"电气故障",desc:"充电触点氧化，接触不良",priority:"L",status:"已关闭",owner:"刘师傅",note:""},
-  ];
-  let issueNextId = 7;
-
-  function renderIssueTable() {
-    const sf = document.getElementById('filterStatus').value;
-    const pf = document.getElementById('filterPriority').value;
-    const filtered = issues.filter(i=>(sf==='all'||i.status===sf)&&(pf==='all'||i.priority===pf));
-    const tbody = document.getElementById('issueTableBody');
-    const empty = document.getElementById('emptyState');
-    if(filtered.length===0){empty.style.display='block';tbody.innerHTML='';}
-    else{empty.style.display='none';tbody.innerHTML=filtered.map(item=>{
-      const pc = item.priority==='H'?'priority-H':item.priority==='M'?'priority-M':'priority-L';
-      const pl = item.priority==='H'?'🔴 高':item.priority==='M'?'🟡 中':'🟢 低';
-      return `<tr><td>${item.id}</td><td>${item.device}</td><td>${item.type}</td><td style="text-align:left;">${item.desc}</td><td><span class="priority ${pc}">${pl}</span></td><td><span class="status-badge-sm status-${item.status}">${item.status}</span></td><td>${item.owner}</td><td style="text-align:left;">${item.note}</td><td><button class="btn-del" onclick="deleteIssueRow(${item.id})">🗑️</button></td></tr>`;}).join('');}
-    document.getElementById('totalCount').textContent=issues.length;
-    document.getElementById('highCount').textContent=issues.filter(i=>i.priority==='H').length;
-    document.getElementById('midCount').textContent=issues.filter(i=>i.priority==='M').length;
-    document.getElementById('resolvedCount').textContent=issues.filter(i=>i.status==='已解决'||i.status==='已关闭').length;
-    document.getElementById('openCount').textContent=issues.filter(i=>i.status==='待处理'||i.status==='处理中'||i.status==='延期').length;
-  }
-
-  function addIssueRow() {
-    const d = {device:document.getElementById('newDevice').value.trim(),type:document.getElementById('newType').value,desc:document.getElementById('newDesc').value.trim(),priority:document.getElementById('newPriority').value,status:document.getElementById('newStatus').value,owner:document.getElementById('newOwner').value.trim(),note:document.getElementById('newNote').value.trim()};
-    if(!d.device||!d.desc){alert('请填写设备名称和描述');return;} issues.push({id:issueNextId++, ...d});
-    ['newDevice','newType','newDesc','newOwner','newNote'].forEach(i=>document.getElementById(i).value='');
-    document.getElementById('newPriority').value='M'; document.getElementById('newStatus').value='待处理'; renderIssueTable();
-  }
-  function deleteIssueRow(id){if(!confirm('确认删除？'))return;issues=issues.filter(i=>i.id!==id);renderIssueTable();}
-  function clearFilters(){document.getElementById('filterStatus').value='all';document.getElementById('filterPriority').value='all';renderIssueTable();}
-  window.addEventListener('resize',()=>requestAnimationFrame(updateBars));
-
-  // ======================================
-  // 一键保存到 GitHub 核心功能
-  // ======================================
-  async function saveToGitHub() {
-    const token = document.getElementById('githubToken').value.trim();
-    const repo = document.getElementById('githubRepo').value.trim();
-    const path = document.getElementById('githubPath').value.trim() || "index.html";
-    
-    if (!token || !repo) {
-      alert("请填写 GitHub Token 和 仓库地址！");
-      return;
+    // ========== 甘特图渲染 ==========
+    function calcBarStyle(start, end, tdElement) {
+        const rangeStart = document.getElementById('rangeStart').value;
+        const rangeEnd   = document.getElementById('rangeEnd').value;
+        if (!rangeStart || !end) return { left:'0px', width:'40px', text:'' };
+        const totalMs = new Date(rangeEnd) - new Date(rangeStart);
+        const startMs = new Date(start) - new Date(rangeStart);
+        const endMs   = new Date(end) - new Date(rangeStart);
+        if (totalMs <= 0) return { left:'0px', width:'40px', text:'' };
+        const availWidth = tdElement ? (tdElement.offsetWidth - 16) : 400;
+        const leftPct  = Math.max(0, startMs / totalMs);
+        const endPct   = Math.min(1, endMs / totalMs);
+        const widthPct = Math.max(0.04, endPct - leftPct);
+        return {
+            left: (leftPct * availWidth).toFixed(0) + 'px',
+            width: Math.max(36, (widthPct * availWidth)).toFixed(0) + 'px',
+            text: start + ' ~ ' + end
+        };
     }
 
-    // 生成完整 HTML 代码
-    const fullHtml = `<!DOCTYPE html>
+    function renderGantt() {
+        const tbody = document.getElementById('ganttTableBody');
+        tbody.innerHTML = ganttData.map((item, idx) => {
+            const tagClass = item.type === 'milestone' ? 'tag-milestone' : 'tag-phase';
+            const tagLabel = item.type === 'milestone' ? '⭐ 里程碑' : '📋 阶段' + (idx+1);
+            return `<tr>
+                <td>${idx+1}</td>
+                <td><span class="phase-tag ${tagClass}">${item.type==='milestone'?'⭐':'📋'}</span></td>
+                <td><div class="phase-name-wrap"><span class="phase-tag ${tagClass}">${tagLabel}</span><span contenteditable="true" data-field="name" data-id="${item.id}" onblur="updateGanttField(${item.id},'name',this.innerText)">${item.name}</span></div></td>
+                <td><input type="date" class="date-input" value="${item.start}" onchange="updateGanttField(${item.id},'start',this.value)"></td>
+                <td><input type="date" class="date-input" value="${item.end}" onchange="updateGanttField(${item.id},'end',this.value)"></td>
+                <td class="gantt-bar-cell" data-bar-cell="true"><div class="gantt-bar bar-phase" data-gantt-bar="${item.id}" title="${item.start} ~ ${item.end}"></div></td>
+                <td><select class="status-select" onchange="updateGanttField(${item.id},'status',this.value)">
+                    <option ${item.status==='计划'?'selected':''}>计划</option>
+                    <option ${item.status==='进行中'?'selected':''}>进行中</option>
+                    <option ${item.status==='已完成'?'selected':''}>已完成</option>
+                    <option ${item.status==='延期'?'selected':''}>延期</option>
+                </select></td>
+                <td><button class="btn-del" onclick="deleteGanttRow(${item.id})">🗑️</button></td>
+            </tr>`;
+        }).join('');
+        requestAnimationFrame(updateBars);
+    }
+
+    function updateBars() {
+        ganttData.forEach(item => {
+            const bar = document.querySelector(`[data-gantt-bar="${item.id}"]`);
+            if (!bar) return;
+            const td = bar.closest('[data-bar-cell]') || bar.parentElement;
+            const style = calcBarStyle(item.start, item.end, td);
+            bar.style.left = style.left;
+            bar.style.width = style.width;
+            bar.title = style.text;
+            if (item.type === 'milestone') {
+                bar.className = 'gantt-bar bar-milestone';
+                bar.textContent = '◆ ' + item.name;
+            } else {
+                bar.className = 'gantt-bar ' + (item.status === '进行中' ? 'bar-inprogress' : 'bar-phase');
+                bar.textContent = style.text;
+            }
+        });
+    }
+
+    function updateGanttField(id, field, value) {
+        const item = ganttData.find(i => i.id === id);
+        if (!item) return;
+        item[field] = field === 'name' ? value : value;
+        if (field === 'start' || field === 'end') requestAnimationFrame(updateBars);
+    }
+
+    function deleteGanttRow(id) {
+        if (!confirm('确认删除？')) return;
+        ganttData = ganttData.filter(i => i.id !== id);
+        renderGantt();
+    }
+
+    function addGanttPhase() {
+        const s = document.getElementById('rangeStart').value || '2026-05-01';
+        const d = new Date(s); d.setDate(d.getDate()+15);
+        ganttData.push({ id:ganttNextId++, type:'phase', name:'新阶段', start:s, end:d.toISOString().slice(0,10), status:'计划' });
+        renderGantt();
+    }
+
+    function addGanttMilestone() {
+        const s = document.getElementById('rangeStart').value || '2026-05-01';
+        ganttData.push({ id:ganttNextId++, type:'milestone', name:'新里程碑', start:s, end:s, status:'计划' });
+        renderGantt();
+    }
+
+    // ========== 问题台账 ==========
+    function renderIssueTable() {
+        const sf = document.getElementById('filterStatus').value;
+        const pf = document.getElementById('filterPriority').value;
+        const filtered = issues.filter(i => (sf==='all'||i.status===sf) && (pf==='all'||i.priority===pf));
+        const tbody = document.getElementById('issueTableBody');
+        const empty = document.getElementById('emptyState');
+        if (filtered.length === 0) {
+            empty.style.display = 'block';
+            tbody.innerHTML = '';
+        } else {
+            empty.style.display = 'none';
+            tbody.innerHTML = filtered.map(item => {
+                const pc = item.priority==='H'?'priority-H':(item.priority==='M'?'priority-M':'priority-L');
+                const pl = item.priority==='H'?'🔴 高':(item.priority==='M'?'🟡 中':'🟢 低');
+                return `<tr>
+                    <td>${item.id}</td><td>${item.device}</td><td>${item.type}</td>
+                    <td style="text-align:left;">${item.desc}</td>
+                    <td><span class="${pc}">${pl}</span></td>
+                    <td><span class="status-badge-sm status-${item.status}">${item.status}</span></td>
+                    <td>${item.owner}</td><td style="text-align:left;">${item.note}</td>
+                    <td><button class="btn-del" onclick="deleteIssueRow(${item.id})">🗑️</button></td>
+                </tr>`;
+            }).join('');
+        }
+        document.getElementById('totalCount').textContent = issues.length;
+        document.getElementById('highCount').textContent = issues.filter(i => i.priority==='H').length;
+        document.getElementById('midCount').textContent = issues.filter(i => i.priority==='M').length;
+        document.getElementById('resolvedCount').textContent = issues.filter(i => i.status==='已解决'||i.status==='已关闭').length;
+        document.getElementById('openCount').textContent = issues.filter(i => i.status==='待处理'||i.status==='处理中'||i.status==='延期').length;
+    }
+
+    function addIssueRow() {
+        const d = {
+            device: document.getElementById('newDevice').value.trim(),
+            type: document.getElementById('newType').value,
+            desc: document.getElementById('newDesc').value.trim(),
+            priority: document.getElementById('newPriority').value,
+            status: document.getElementById('newStatus').value,
+            owner: document.getElementById('newOwner').value.trim(),
+            note: document.getElementById('newNote').value.trim()
+        };
+        if (!d.device || !d.desc) { alert('请填写设备名称和描述'); return; }
+        issues.push({ id: issueNextId++, ...d });
+        ['newDevice','newDesc','newOwner','newNote'].forEach(id => document.getElementById(id).value = '');
+        document.getElementById('newType').value = '';
+        document.getElementById('newPriority').value = 'M';
+        document.getElementById('newStatus').value = '待处理';
+        renderIssueTable();
+    }
+
+    function deleteIssueRow(id) {
+        if (!confirm('确认删除？')) return;
+        issues = issues.filter(i => i.id !== id);
+        renderIssueTable();
+    }
+
+    function clearFilters() {
+        document.getElementById('filterStatus').value = 'all';
+        document.getElementById('filterPriority').value = 'all';
+        renderIssueTable();
+    }
+
+    window.addEventListener('resize', () => requestAnimationFrame(updateBars));
+
+    // ========== 一键同步到 GitHub ==========
+    async function saveToGitHub() {
+        const token = document.getElementById('githubToken').value.trim();
+        const repo = document.getElementById('githubRepo').value.trim();
+        const path = document.getElementById('githubPath').value.trim() || 'index.html';
+        if (!token || !repo) { alert('请填写 GitHub Token 和仓库地址'); return; }
+
+        // 生成包含当前数据的完整 HTML
+        const fullHtml = generateFullHtml();
+        // 使用 encodeURIComponent 处理中文，再 base64 编码
+        const base64Content = btoa(unescape(encodeURIComponent(fullHtml)));
+
+        try {
+            const response = await fetch(`https://api.github.com/repos/${repo}/contents/${path}`, {
+                method: 'PUT',
+                headers: {
+                    'Authorization': `token ${token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    message: '更新设备调试管理清单数据',
+                    content: base64Content
+                })
+            });
+            const data = await response.json();
+            if (response.ok) {
+                alert('✅ 同步成功！数据已保存到 GitHub');
+            } else {
+                alert('❌ 同步失败：' + (data.message || '未知错误'));
+            }
+        } catch (err) {
+            alert('网络错误：' + err.message);
+        }
+    }
+
+    function generateFullHtml() {
+        // 获取当前日期范围
+        const rangeStart = document.getElementById('rangeStart').value;
+        const rangeEnd = document.getElementById('rangeEnd').value;
+        // 生成完整的 HTML 字符串，内嵌当前数据
+        return `<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>单品线设备调试阶段进度及问题管理清单</title>
 <style>
-  :root {
-    --primary: #1a7a4a;
-    --primary-light: #2a9a6a;
-    --header-bg: #17966b;
-    --border: #b2d8c8;
-    --text: #1a1a1a;
-    --text-light: #555;
-    --status-problem: #e74c3c;
-  }
-
+  :root { --primary: #1a7a4a; --primary-light: #2a9a6a; --header-bg: #17966b; --border: #b2d8c8; --text: #1a1a1a; --text-light: #555; --status-problem: #e74c3c; }
   * { margin: 0; padding: 0; box-sizing: border-box; }
-
-  body {
-    font-family: 'PingFang SC', 'Microsoft YaHei', 'Helvetica Neue', Arial, sans-serif;
-    background: #f0f7f3;
-    color: var(--text);
-    padding: 24px;
-  }
-
-  .page-header {
-    background: linear-gradient(135deg, var(--primary), var(--primary-light));
-    color: white;
-    padding: 28px 36px;
-    border-radius: 16px;
-    margin-bottom: 28px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-  }
+  body { font-family: 'PingFang SC','Microsoft YaHei','Helvetica Neue',Arial,sans-serif; background: #f0f7f3; color: var(--text); padding: 24px; }
+  .page-header { background: linear-gradient(135deg, var(--primary), var(--primary-light)); color: white; padding: 28px 36px; border-radius: 16px; margin-bottom: 28px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; }
   .page-header h1 { font-size: 22px; font-weight: 700; letter-spacing: 1px; }
   .page-header .subtitle { font-size: 13px; opacity: 0.85; margin-top: 6px; }
-  .status-badge {
-    background: rgba(255,255,255,0.2);
-    border: 1px solid rgba(255,255,255,0.4);
-    padding: 6px 16px;
-    border-radius: 20px;
-    font-size: 13px;
-  }
-  .github-sync {
-    display: flex;
-    gap: 10px;
-    align-items: center;
-  }
-  .github-input {
-    padding: 6px 10px;
-    border-radius: 6px;
-    border: none;
-    font-size: 12px;
-    width: 160px;
-  }
-  .btn-save {
-    background: #ffffff;
-    color: var(--primary);
-    border: 1px solid #fff;
-    padding: 6px 14px;
-    border-radius: 8px;
-    cursor: pointer;
-    font-size: 13px;
-    transition: all 0.2s;
-  }
-  .btn-save:hover {
-    background: #f0faf4;
-  }
-  .card {
-    background: white;
-    border-radius: 14px;
-    box-shadow: 0 2px 12px rgba(0,0,0,0.06);
-    margin-bottom: 24px;
-    overflow: hidden;
-  }
-  .card-header {
-    background: var(--header-bg);
-    color: white;
-    padding: 14px 24px;
-    font-size: 15px;
-    font-weight: 600;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-  }
+  .status-badge { background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.4); padding: 6px 16px; border-radius: 20px; font-size: 13px; }
+  .github-sync { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .github-input { padding: 6px 10px; border-radius: 6px; border: none; font-size: 12px; width: 160px; }
+  .btn-save { background: #ffffff; color: var(--primary); border: 1px solid #fff; padding: 6px 14px; border-radius: 8px; cursor: pointer; font-size: 13px; transition: all 0.2s; }
+  .btn-save:hover { background: #f0faf4; }
+  .card { background: white; border-radius: 14px; box-shadow: 0 2px 12px rgba(0,0,0,0.06); margin-bottom: 24px; overflow: hidden; }
+  .card-header { background: var(--header-bg); color: white; padding: 14px 24px; font-size: 15px; font-weight: 600; display: flex; align-items: center; gap: 10px; }
   .card-header .icon { font-size: 18px; }
-  .card-header .hint {
-    margin-left: auto;
-    font-size: 12px;
-    opacity: 0.8;
-    font-weight: 400;
-  }
-  [contenteditable] {
-    outline: none;
-    border-radius: 4px;
-    padding: 2px 4px;
-    min-width: 20px;
-    display: inline-block;
-    transition: background 0.2s, box-shadow 0.2s;
-    cursor: text;
-  }
-  [contenteditable]:hover {
-    background: #f0fff4;
-    box-shadow: 0 0 0 2px rgba(23,150,107,0.2);
-  }
-  [contenteditable]:focus {
-    background: #ffffff;
-    box-shadow: 0 0 0 2px rgba(23,150,107,0.5);
-    outline: 2px solid var(--primary);
-    outline-offset: 0;
-  }
-  [contenteditable]:empty::before {
-    content: attr(data-placeholder);
-    color: #aaa;
-    pointer-events: none;
-  }
-  .gantt-config {
-    display: flex;
-    gap: 12px;
-    padding: 12px 24px;
-    background: #f0faf4;
-    border-bottom: 1px solid #e8f0ec;
-    flex-wrap: wrap;
-    align-items: center;
-  }
-  .gantt-config label {
-    font-size: 12px;
-    color: var(--text-light);
-    white-space: nowrap;
-  }
-  .gantt-config input[type="date"] {
-    padding: 5px 10px;
-    border: 1.5px solid var(--border);
-    border-radius: 6px;
-    font-size: 12px;
-    font-family: inherit;
-    outline: none;
-    background: white;
-    transition: border-color 0.2s;
-  }
-  .gantt-config input[type="date"]:focus { border-color: var(--primary); }
-  .gantt-config .sep { font-size: 12px; color: #aaa; }
-  .gantt-config .hint { font-size: 11px; color: #aaa; margin-left: 4px; }
-  .gantt-scroll-wrapper {
-    overflow-x: auto;
-    padding: 0;
-  }
-  table.gantt-table {
-    border-collapse: collapse;
-    font-size: 13px;
-    table-layout: fixed;
-    width: 100%;
-    min-width: 860px;
-  }
-  table.gantt-table thead tr {
-    background: var(--header-bg);
-    color: white;
-  }
-  table.gantt-table th {
-    padding: 11px 10px;
-    text-align: center;
-    font-weight: 600;
-    font-size: 12px;
-    border-right: 1px solid rgba(255,255,255,0.15);
-    white-space: nowrap;
-  }
-  table.gantt-table th:last-child { border-right: none; }
-  .gantt-col-seq     { width: 44px; }
-  .gantt-col-type    { width: 50px; }
-  .gantt-col-name    { width: 180px; }
-  .gantt-col-date    { width: 108px; }
-  .gantt-col-bar     { width: auto; }
-  .gantt-col-status  { width: 88px; }
-  .gantt-col-action  { width: 64px; }
-  table.gantt-table tbody tr {
-    border-bottom: 1px solid #e8f0ec;
-    transition: background 0.15s;
-  }
+  .card-header .hint { margin-left: auto; font-size: 12px; opacity: 0.8; font-weight: 400; }
+  [contenteditable] { outline: none; border-radius: 4px; padding: 2px 4px; min-width: 20px; display: inline-block; transition: background 0.2s, box-shadow 0.2s; cursor: text; }
+  [contenteditable]:hover { background: #f0fff4; box-shadow: 0 0 0 2px rgba(23,150,107,0.2); }
+  [contenteditable]:focus { background: #ffffff; box-shadow: 0 0 0 2px rgba(23,150,107,0.5); outline: 2px solid var(--primary); }
+  .gantt-config { display: flex; gap: 12px; padding: 12px 24px; background: #f0faf4; border-bottom: 1px solid #e8f0ec; flex-wrap: wrap; align-items: center; }
+  .gantt-config label { font-size: 12px; color: var(--text-light); }
+  .gantt-config input[type="date"] { padding: 5px 10px; border: 1.5px solid var(--border); border-radius: 6px; font-size: 12px; }
+  .gantt-scroll-wrapper { overflow-x: auto; }
+  table.gantt-table { border-collapse: collapse; font-size: 13px; table-layout: fixed; width: 100%; min-width: 860px; }
+  table.gantt-table thead tr { background: var(--header-bg); color: white; }
+  table.gantt-table th { padding: 11px 10px; text-align: center; font-weight: 600; font-size: 12px; border-right: 1px solid rgba(255,255,255,0.15); }
+  .gantt-col-seq { width: 44px; } .gantt-col-type { width: 50px; } .gantt-col-name { width: 180px; } .gantt-col-date { width: 108px; } .gantt-col-bar { width: auto; } .gantt-col-status { width: 88px; } .gantt-col-action { width: 64px; }
+  table.gantt-table tbody tr { border-bottom: 1px solid #e8f0ec; }
   table.gantt-table tbody tr:hover { background: #f8fdf9; }
-  table.gantt-table tbody tr:nth-child(even) { background: #fafdfb; }
-  table.gantt-table tbody tr:nth-child(even):hover { background: #f0faf4; }
-  table.gantt-table td {
-    padding: 9px 10px;
-    border-right: 1px solid #e8f0ec;
-    vertical-align: middle;
-    overflow: hidden;
-  }
-  table.gantt-table td:last-child { border-right: none; }
-  .phase-name-wrap {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-  }
-  .phase-tag {
-    display: inline-block;
-    padding: 2px 7px;
-    border-radius: 4px;
-    font-size: 11px;
-    font-weight: 600;
-    white-space: nowrap;
-    flex-shrink: 0;
-  }
+  table.gantt-table td { padding: 9px 10px; border-right: 1px solid #e8f0ec; vertical-align: middle; }
+  .phase-tag { display: inline-block; padding: 2px 7px; border-radius: 4px; font-size: 11px; font-weight: 600; }
   .tag-phase { background: #e8f5ef; color: var(--primary); }
   .tag-milestone { background: #fff3e0; color: #e67e22; }
-  .date-input {
-    width: 100%;
-    padding: 4px 6px;
-    border: 1.5px solid var(--border);
-    border-radius: 6px;
-    font-size: 12px;
-    font-family: inherit;
-    outline: none;
-    background: #f8fdf9;
-    transition: border-color 0.2s;
-    text-align: center;
-  }
-  .date-input:focus { border-color: var(--primary); background: white; }
-  .gantt-bar-cell {
-    position: relative;
-    height: 44px;
-    padding: 0 4px !important;
-    overflow: visible;
-  }
-  .gantt-bar {
-    position: absolute;
-    top: 50%;
-    transform: translateY(-50%);
-    height: 26px;
-    border-radius: 6px;
-    display: flex;
-    align-items: center;
-    padding: 0 8px;
-    font-size: 10px;
-    color: white;
-    white-space: nowrap;
-    overflow: hidden;
-    font-weight: 500;
-    cursor: default;
-    transition: filter 0.2s;
-    min-width: 36px;
-    box-shadow: 1px 1px 4px rgba(0,0,0,0.15);
-  }
-  .gantt-bar:hover { filter: brightness(1.1); }
-  .bar-phase    { background: linear-gradient(90deg,#27ae60,#2ecc71); }
+  .gantt-bar-cell { position: relative; height: 44px; padding: 0 4px !important; overflow: visible; }
+  .gantt-bar { position: absolute; top: 50%; transform: translateY(-50%); height: 26px; border-radius: 6px; display: flex; align-items: center; padding: 0 8px; font-size: 10px; color: white; white-space: nowrap; font-weight: 500; min-width: 36px; box-shadow: 1px 1px 4px rgba(0,0,0,0.15); }
+  .bar-phase { background: linear-gradient(90deg,#27ae60,#2ecc71); }
   .bar-inprogress { background: linear-gradient(90deg,#2980b9,#3498db); }
   .bar-milestone { background: linear-gradient(90deg,#e67e22,#f39c12); border-radius: 4px; }
-  .status-select {
-    width: 100%;
-    padding: 4px 6px;
-    border: 1.5px solid var(--border);
-    border-radius: 6px;
-    font-size: 12px;
-    font-family: inherit;
-    outline: none;
-    background: #f8fdf9;
-    cursor: pointer;
-  }
-  .status-select:focus { border-color: var(--primary); }
-  .btn-del {
-    padding: 3px 8px;
-    background: white;
-    color: #e74c3c;
-    border: 1.5px solid #e74c3c;
-    border-radius: 6px;
-    font-size: 11px;
-    cursor: pointer;
-    transition: all 0.2s;
-    white-space: nowrap;
-  }
-  .btn-del:hover { background: #e74c3c; color: white; }
-  .gantt-footer {
-    display: flex;
-    gap: 0;
-    border-top: 2px solid var(--border);
-    flex-wrap: wrap;
-  }
-  .gantt-legend {
-    display: flex;
-    gap: 16px;
-    padding: 12px 24px;
-    background: #f8fdf9;
-    flex-wrap: wrap;
-    flex: 1;
-  }
-  .legend-item {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 12px;
-    color: var(--text-light);
-  }
-  .legend-bar { width: 26px; height: 13px; border-radius: 4px; flex-shrink: 0; }
-  .legend-diamond { width: 10px; height: 10px; transform: rotate(45deg); background: #e67e22; flex-shrink: 0; }
-  .gantt-add-btns {
-    display: flex;
-    gap: 8px;
-    padding: 10px 24px;
-    align-items: center;
-    flex-wrap: wrap;
-    background: #f8fdf9;
-  }
-  .btn {
-    padding: 7px 16px;
-    background: var(--primary);
-    color: white;
-    border: none;
-    border-radius: 8px;
-    font-size: 13px;
-    cursor: pointer;
-    transition: background 0.2s;
-    white-space: nowrap;
-  }
-  .btn:hover { background: var(--primary-light); }
-  .btn-outline {
-    background: white;
-    color: var(--primary);
-    border: 1.5px solid var(--primary);
-  }
-  .btn-outline:hover { background: #e8f5ef; }
-  .btn-sm { padding: 5px 12px; font-size: 12px; }
-  .issue-controls {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 16px 24px;
-    border-bottom: 1px solid #e8f0ec;
-    flex-wrap: wrap;
-  }
-  .issue-table-wrapper { overflow-x: auto; padding: 0; }
-  table.issue-table { width: 100%; border-collapse: collapse; font-size: 13px; }
-  table.issue-table thead tr { background: var(--header-bg); color: white; }
-  table.issue-table th {
-    padding: 12px 14px;
-    text-align: center;
-    font-weight: 600;
-    font-size: 13px;
-    border-right: 1px solid rgba(255,255,255,0.15);
-    white-space: nowrap;
-  }
-  table.issue-table th:last-child { border-right: none; }
-  table.issue-table tbody tr {
-    border-bottom: 1px solid #e8f0ec;
-    transition: background 0.15s;
-  }
-  table.issue-table tbody tr:hover { background: #f0faf4; }
-  table.issue-table tbody tr:nth-child(even) { background: #fafdfb; }
-  table.issue-table tbody tr:nth-child(even):hover { background: #f0faf4; }
-  table.issue-table td {
-    padding: 11px 14px;
-    text-align: center;
-    border-right: 1px solid #e8f0ec;
-    vertical-align: middle;
-  }
-  table.issue-table td:last-child { border-right: none; }
-  table.issue-table td:first-child { font-weight: 600; color: var(--text-light); }
-  .status-badge-sm {
-    display: inline-block;
-    padding: 3px 10px;
-    border-radius: 12px;
-    font-size: 11px;
-    font-weight: 600;
-  }
-  .status-待处理 { background: #fff3cd; color: #856404; }
-  .status-处理中 { background: #d1ecf1; color: #0c5460; }
-  .status-已解决 { background: #d4edda; color: #155724; }
-  .status-已关闭 { background: #e2e3e5; color: #383d41; }
-  .status-延期 { background: #f8d7da; color: #721c24; }
-  .priority { font-weight: 600; }
-  .priority-H { color: #e74c3c; }
-  .priority-M { color: #e67e22; }
-  .priority-L { color: #27ae60; }
-  .add-row-form {
-    display: flex;
-    gap: 8px;
-    padding: 14px 24px;
-    background: #f8fdf9;
-    border-top: 2px solid var(--border);
-    flex-wrap: wrap;
-    align-items: center;
-  }
-  .add-row-form input,
-  .add-row-form select {
-    padding: 7px 12px;
-    border: 1.5px solid var(--border);
-    border-radius: 8px;
-    font-size: 12px;
-    outline: none;
-    background: white;
-    transition: border-color 0.2s;
-    min-width: 110px;
-  }
-  .add-row-form input:focus,
-  .add-row-form select:focus { border-color: var(--primary); }
-  .add-row-form .form-label { font-size: 12px; color: var(--text-light); white-space: nowrap; }
-  .summary-bar { display: flex; gap: 0; border-top: 1px solid var(--border); }
-  .summary-item {
-    flex: 1;
-    padding: 12px 16px;
-    text-align: center;
-    border-right: 1px solid var(--border);
-    font-size: 12px;
-    color: var(--text-light);
-  }
-  .summary-item:last-child { border-right: none; }
-  .summary-item .num {
-    font-size: 20px;
-    font-weight: 700;
-    color: var(--primary);
-    display: block;
-    margin-bottom: 2px;
-  }
+  .status-select { width: 100%; padding: 4px 6px; border: 1.5px solid var(--border); border-radius: 6px; font-size: 12px; }
+  .btn-del { padding: 3px 8px; background: white; color: #e74c3c; border: 1.5px solid #e74c3c; border-radius: 6px; font-size: 11px; cursor: pointer; }
+  .gantt-footer { display: flex; border-top: 2px solid var(--border); flex-wrap: wrap; }
+  .gantt-legend { display: flex; gap: 16px; padding: 12px 24px; background: #f8fdf9; flex: 1; }
+  .legend-item { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-light); }
+  .legend-bar { width: 26px; height: 13px; border-radius: 4px; }
+  .gantt-add-btns { display: flex; gap: 8px; padding: 10px 24px; align-items: center; }
+  .btn { padding: 7px 16px; background: var(--primary); color: white; border: none; border-radius: 8px; font-size: 13px; cursor: pointer; }
+  .btn-outline { background: white; color: var(--primary); border: 1.5px solid var(--primary); }
+  .summary-bar { display: flex; border-top: 1px solid var(--border); }
+  .summary-item { flex: 1; padding: 12px 16px; text-align: center; border-right: 1px solid var(--border); font-size: 12px; }
+  .summary-item .num { font-size: 20px; font-weight: 700; color: var(--primary); display: block; }
   .summary-item .num.red { color: var(--status-problem); }
   .summary-item .num.orange { color: #e67e22; }
-  .empty-state {
-    text-align: center;
-    padding: 40px;
-    color: var(--text-light);
-    font-size: 14px;
-  }
-  .empty-state .icon { font-size: 36px; margin-bottom: 10px; display: block; }
-  @media (max-width: 768px) {
-    body { padding: 12px; }
-    .page-header { padding: 20px; flex-direction: column; gap: 15px; align-items: flex-start; }
-    .page-header h1 { font-size: 18px; }
-    .github-sync { width: 100%; flex-wrap: wrap; }
-  }
+  table.issue-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  table.issue-table thead tr { background: var(--header-bg); color: white; }
+  table.issue-table th { padding: 12px 14px; text-align: center; font-weight: 600; border-right: 1px solid rgba(255,255,255,0.15); }
+  table.issue-table td { padding: 11px 14px; text-align: center; border-right: 1px solid #e8f0ec; }
+  .status-badge-sm { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 11px; font-weight: 600; }
+  .status-待处理 { background: #fff3cd; color: #856404; } .status-处理中 { background: #d1ecf1; color: #0c5460; } .status-已解决 { background: #d4edda; color: #155724; } .status-已关闭 { background: #e2e3e5; color: #383d41; } .status-延期 { background: #f8d7da; color: #721c24; }
+  .priority-H { color: #e74c3c; font-weight: 600; } .priority-M { color: #e67e22; font-weight: 600; } .priority-L { color: #27ae60; font-weight: 600; }
+  .add-row-form { display: flex; gap: 8px; padding: 14px 24px; background: #f8fdf9; border-top: 2px solid var(--border); flex-wrap: wrap; align-items: center; }
+  .add-row-form input, .add-row-form select { padding: 7px 12px; border: 1.5px solid var(--border); border-radius: 8px; font-size: 12px; }
+  .empty-state { text-align: center; padding: 40px; color: var(--text-light); }
+  @media (max-width: 768px) { body { padding: 12px; } .page-header { flex-direction: column; align-items: flex-start; } }
 </style>
 </head>
 <body>
-
 <div class="page-header">
-  <div>
-    <h1>📦 单品线设备调试阶段进度及问题管理清单</h1>
-    <div class="subtitle">黄冈物流仓 · 设备综合组 · 2026年调试阶段</div>
-  </div>
+  <div><h1>📦 单品线设备调试阶段进度及问题管理清单</h1><div class="subtitle">黄冈物流仓 · 设备综合组 · 2026年调试阶段</div></div>
   <div class="github-sync">
     <input class="github-input" id="githubToken" placeholder="GitHub Token" type="password">
     <input class="github-input" id="githubRepo" placeholder="用户名/仓库名">
@@ -1118,57 +733,26 @@
   </div>
   <div class="status-badge">🟢 调试中</div>
 </div>
-
 <div class="card">
-  <div class="card-header">
-    <span class="icon">📊</span>
-    <span>调试进度甘特图</span>
-    <span class="hint">✏️ 点击文字/日期即可直接编辑</span>
-  </div>
+  <div class="card-header"><span class="icon">📊</span> <span>调试进度甘特图</span> <span class="hint">✏️ 点击文字/日期即可直接编辑</span></div>
   <div class="gantt-config">
     <label>时间范围：</label>
-    <input type="date" id="rangeStart" value="${document.getElementById('rangeStart').value}">
+    <input type="date" id="rangeStart" value="${rangeStart}">
     <span class="sep">至</span>
-    <input type="date" id="rangeEnd" value="${document.getElementById('rangeEnd').value}">
+    <input type="date" id="rangeEnd" value="${rangeEnd}">
     <button class="btn btn-outline btn-sm" onclick="renderGantt()">🔄 更新甘特条</button>
-    <span class="hint">修改日期后点击按钮刷新甘特条位置</span>
   </div>
   <div class="gantt-scroll-wrapper">
-    <table class="gantt-table" id="ganttTable">
-      <thead>
-        <tr>
-          <th class="gantt-col-seq">序号</th>
-          <th class="gantt-col-type">类型</th>
-          <th class="gantt-col-name">阶段 / 里程碑名称</th>
-          <th class="gantt-col-date">开始日期</th>
-          <th class="gantt-col-date">结束日期</th>
-          <th class="gantt-col-bar">甘特条（自动生成）</th>
-          <th class="gantt-col-status">状态</th>
-          <th class="gantt-col-action">操作</th>
-        </tr>
-      </thead>
-      <tbody id="ganttTableBody"></tbody>
-    </table>
+    <table class="gantt-table"><thead><tr><th>序号</th><th>类型</th><th>名称</th><th>开始</th><th>结束</th><th>甘特条</th><th>状态</th><th>操作</th></tr></thead>
+    <tbody id="ganttTableBody"></tbody></table>
   </div>
   <div class="gantt-footer">
-    <div class="gantt-legend">
-      <div class="legend-item"><div class="legend-bar" style="background:linear-gradient(90deg,#27ae60,#2ecc71)"></div>计划阶段</div>
-      <div class="legend-item"><div class="legend-bar" style="background:linear-gradient(90deg,#2980b9,#3498db)"></div>进行中</div>
-      <div class="legend-item"><div class="legend-diamond"></div>里程碑节点</div>
-    </div>
-    <div class="gantt-add-btns">
-      <button class="btn btn-sm" onclick="addGanttPhase()">➕ 新增阶段</button>
-      <button class="btn btn-outline btn-sm" onclick="addGanttMilestone()">⭐ 新增里程碑</button>
-    </div>
+    <div class="gantt-legend"><div class="legend-item"><div class="legend-bar" style="background:linear-gradient(90deg,#27ae60,#2ecc71)"></div>计划阶段</div><div class="legend-item"><div class="legend-bar" style="background:linear-gradient(90deg,#2980b9,#3498db)"></div>进行中</div><div class="legend-item"><div class="legend-diamond" style="width:10px;height:10px;transform:rotate(45deg);background:#e67e22;"></div>里程碑</div></div>
+    <div class="gantt-add-btns"><button class="btn btn-sm" onclick="addGanttPhase()">➕ 新增阶段</button><button class="btn btn-outline btn-sm" onclick="addGanttMilestone()">⭐ 新增里程碑</button></div>
   </div>
 </div>
-
 <div class="card">
-  <div class="card-header">
-    <span class="icon">🔧</span>
-    <span>设备问题登记台账</span>
-    <span class="hint">按照片格式生成 · 支持在线添加</span>
-  </div>
+  <div class="card-header"><span class="icon">🔧</span> <span>设备问题登记台账</span></div>
   <div class="summary-bar">
     <div class="summary-item"><span class="num" id="totalCount">0</span>问题总数</div>
     <div class="summary-item"><span class="num red" id="highCount">0</span>🔴 高优先级</div>
@@ -1177,35 +761,19 @@
     <div class="summary-item"><span class="num" id="openCount">0</span>⏳ 待处理</div>
   </div>
   <div class="issue-controls">
-    <label class="form-label">🔍 筛选：</label>
     <select id="filterStatus" onchange="renderIssueTable()"><option value="all">全部状态</option><option value="待处理">待处理</option><option value="处理中">处理中</option><option value="已解决">已解决</option><option value="已关闭">已关闭</option><option value="延期">延期</option></select>
     <select id="filterPriority" onchange="renderIssueTable()"><option value="all">全部优先级</option><option value="H">🔴 高</option><option value="M">🟡 中</option><option value="L">🟢 低</option></select>
     <button class="btn btn-outline btn-sm" onclick="clearFilters()">🔄 清除筛选</button>
   </div>
   <div class="issue-table-wrapper">
-    <table class="issue-table" id="issueTable">
-      <thead>
-        <tr>
-          <th style="width:50px;">序号</th>
-          <th style="width:120px;">设备名称</th>
-          <th style="width:90px;">问题类型</th>
-          <th style="min-width:200px;">问题描述</th>
-          <th style="width:80px;">优先级</th>
-          <th style="width:90px;">问题状态</th>
-          <th style="width:90px;">负责人</th>
-          <th style="min-width:100px;">备注</th>
-          <th style="width:70px;">操作</th>
-        </tr>
-      </thead>
-      <tbody id="issueTableBody"></tbody>
-    </table>
-    <div class="empty-state" id="emptyState" style="display:none;"><span class="icon">📭</span>暂无符合条件的问题记录</div>
+    <table class="issue-table"><thead><tr><th>序号</th><th>设备名称</th><th>问题类型</th><th>问题描述</th><th>优先级</th><th>状态</th><th>负责人</th><th>备注</th><th>操作</th></tr></thead>
+    <tbody id="issueTableBody"></tbody></table>
+    <div class="empty-state" id="emptyState" style="display:none;">📭 暂无符合条件的记录</div>
   </div>
   <div class="add-row-form">
-    <span class="form-label" style="font-weight:600;color:var(--primary);">➕ 新增问题记录：</span>
     <input type="text" id="newDevice" placeholder="设备名称">
     <select id="newType"><option value="">类型</option><option>机械故障</option><option>电气故障</option><option>软件/控制</option><option>安全隐患</option><option>安装问题</option><option>其他</option></select>
-    <input type="text" id="newDesc" placeholder="问题描述" style="min-width:200px;">
+    <input type="text" id="newDesc" placeholder="问题描述">
     <select id="newPriority"><option value="M">🟡 中</option><option value="H">🔴 高</option><option value="L">🟢 低</option></select>
     <select id="newStatus"><option value="待处理">待处理</option><option value="处理中">处理中</option><option value="已解决">已解决</option><option value="已关闭">已关闭</option><option value="延期">延期</option></select>
     <input type="text" id="newOwner" placeholder="负责人">
@@ -1213,162 +781,34 @@
     <button class="btn btn-sm" onclick="addIssueRow()">✅ 添加</button>
   </div>
 </div>
-
 <script>
   let ganttData = ${JSON.stringify(ganttData)};
   let ganttNextId = ${ganttNextId};
-
-  function calcBarStyle(start, end, tdElement) {
-    const rangeStart = document.getElementById('rangeStart').value;
-    const rangeEnd   = document.getElementById('rangeEnd').value;
-    if (!rangeStart || !end) return { left:'0px', width:'40px', text:'' };
-    const totalMs    = new Date(rangeEnd) - new Date(rangeStart);
-    const startMs    = new Date(start) - new Date(rangeStart);
-    const endMs      = new Date(end) - new Date(rangeStart);
-    if (totalMs <= 0) return { left:'0px', width:'40px', text:'' };
-    const PAD = 8;
-    const availWidth = tdElement ? (tdElement.offsetWidth - PAD * 2) : 400;
-    const leftPct  = Math.max(0, startMs / totalMs) * 100;
-    const endPct   = Math.min(1, endMs / totalMs) * 100;
-    const widthPct = Math.max(4, endPct - leftPct);
-    const leftPx  = (leftPct / 100 * availWidth).toFixed(0);
-    const widthPx = Math.max(36, (widthPct / 100 * availWidth)).toFixed(0);
-    return { left: leftPx + 'px', width: widthPx + 'px', text: start + ' ~ ' + end };
-  }
-
-  function renderGantt() {
-    const tbody = document.getElementById('ganttTableBody');
-    tbody.innerHTML = ganttData.map((item, idx) => {
-      const tagClass = item.type === 'milestone' ? 'tag-milestone' : 'tag-phase';
-      const tagIcon  = item.type === 'milestone' ? '⭐' : '📋';
-      const tagLabel = item.type === 'milestone' ? '里程碑' : '阶段' + (idx + 1);
-      return '<tr>'+
-        '<td class="gantt-col-seq">'+(idx+1)+'</td>'+
-        '<td class="gantt-col-type"><span class="phase-tag '+tagClass+'" style="padding:2px 5px;font-size:10px;">'+tagIcon+'</span></td>'+
-        '<td class="gantt-col-name"><div class="phase-name-wrap"><span class="phase-tag '+tagClass+'">'+tagLabel+'</span><span contenteditable="true" data-field="name" data-id="'+item.id+'" data-placeholder="输入名称" onblur="updateGanttField('+item.id+',\'name\',this)" style="font-size:12px;">'+item.name+'</span></div></td>'+
-        '<td class="gantt-col-date"><input type="date" class="date-input" value="'+item.start+'" onchange="updateGanttField('+item.id+',\'start\',this.value)"></td>'+
-        '<td class="gantt-col-date"><input type="date" class="date-input" value="'+item.end+'" onchange="updateGanttField('+item.id+',\'end\',this.value)"></td>'+
-        '<td class="gantt-col-bar gantt-bar-cell" data-bar-cell="true"><div class="gantt-bar bar-phase" style="left:0;width:40px;" data-gantt-bar="'+item.id+'" title="'+item.start+' ~ '+item.end+'"></div></td>'+
-        '<td class="gantt-col-status"><select class="status-select" onchange="updateGanttField('+item.id+',\'status\',this.value)"><option '+(item.status==='计划'?'selected':'')+'>计划</option><option '+(item.status==='进行中'?'selected':'')+'>进行中</option><option '+(item.status==='已完成'?'selected':'')+'>已完成</option><option '+(item.status==='延期'?'selected':'')+'>延期</option></select></td>'+
-        '<td class="gantt-col-action"><button class="btn-del" onclick="deleteGanttRow('+item.id+')">🗑️</button></td>'+
-      '</tr>';
-    }).join('');
-    requestAnimationFrame(() => updateBars());
-  }
-
-  function updateBars() {
-    ganttData.forEach(item => {
-      const bar = document.querySelector('[data-gantt-bar="'+item.id+'"]');
-      if (!bar) return;
-      const td = bar.closest('[data-bar-cell]') || bar.parentElement;
-      const style = calcBarStyle(item.start, item.end, td);
-      bar.style.left = style.left; bar.style.width = style.width; bar.title = style.text;
-      if (item.type === 'milestone') { bar.className = 'gantt-bar bar-milestone'; bar.textContent = '◆ ' + (item.name || ''); }
-      else { bar.className = 'gantt-bar ' + (item.status === '进行中' ? 'bar-inprogress' : 'bar-phase'); bar.textContent = style.text; }
-    });
-  }
-
-  function updateGanttField(id, field, value) {
-    const item = ganttData.find(i => i.id === id);
-    if (!item) return;
-    item[field] = field === 'name' ? (value.innerText || value) : value;
-    if (field === 'start' || field === 'end') requestAnimationFrame(() => updateBars());
-  }
-
-  function deleteGanttRow(id) { if (!confirm('确认删除？')) return; ganttData = ganttData.filter(i => i.id !== id); renderGantt(); }
-  function addGanttPhase() {
-    const s = document.getElementById('rangeStart').value || '2026-05-01';
-    const d = new Date(s); d.setDate(d.getDate()+15);
-    ganttData.push({id:ganttNextId++,type:'phase',name:'新阶段',start:s,end:d.toISOString().slice(0,10),status:'计划'}); renderGantt();
-  }
-  function addGanttMilestone() {
-    const s = document.getElementById('rangeStart').value || '2026-05-01';
-    ganttData.push({id:ganttNextId++,type:'milestone',name:'新里程碑',start:s,end:s,status:'计划'}); renderGantt();
-  }
-
   let issues = ${JSON.stringify(issues)};
   let issueNextId = ${issueNextId};
-
-  function renderIssueTable() {
-    const sf = document.getElementById('filterStatus').value;
-    const pf = document.getElementById('filterPriority').value;
-    const filtered = issues.filter(i=>(sf==='all'||i.status===sf)&&(pf==='all'||i.priority===pf));
-    const tbody = document.getElementById('issueTableBody');
-    const empty = document.getElementById('emptyState');
-    if(filtered.length===0){empty.style.display='block';tbody.innerHTML='';}
-    else{empty.style.display='none';tbody.innerHTML=filtered.map(item=>{
-      const pc = item.priority==='H'?'priority-H':item.priority==='M'?'priority-M':'priority-L';
-      const pl = item.priority==='H'?'🔴 高':item.priority==='M'?'🟡 中':'🟢 低';
-      return '<tr><td>'+item.id+'</td><td>'+item.device+'</td><td>'+item.type+'</td><td style="text-align:left;">'+item.desc+'</td><td><span class="priority '+pc+'">'+pl+'</span></td><td><span class="status-badge-sm status-'+item.status+'">'+item.status+'</span></td><td>'+item.owner+'</td><td style="text-align:left;">'+item.note+'</td><td><button class="btn-del" onclick="deleteIssueRow('+item.id+')">🗑️</button></td></tr>';}).join('');}
-    document.getElementById('totalCount').textContent=issues.length;
-    document.getElementById('highCount').textContent=issues.filter(i=>i.priority==='H').length;
-    document.getElementById('midCount').textContent=issues.filter(i=>i.priority==='M').length;
-    document.getElementById('resolvedCount').textContent=issues.filter(i=>i.status==='已解决'||i.status==='已关闭').length;
-    document.getElementById('openCount').textContent=issues.filter(i=>i.status==='待处理'||i.status==='处理中'||i.status==='延期').length;
-  }
-
-  function addIssueRow() {
-    const d = {device:document.getElementById('newDevice').value.trim(),type:document.getElementById('newType').value,desc:document.getElementById('newDesc').value.trim(),priority:document.getElementById('newPriority').value,status:document.getElementById('newStatus').value,owner:document.getElementById('newOwner').value.trim(),note:document.getElementById('newNote').value.trim()};
-    if(!d.device||!d.desc){alert('请填写设备名称和描述');return;} issues.push({id:issueNextId++, ...d});
-    ['newDevice','newType','newDesc','newOwner','newNote'].forEach(i=>document.getElementById(i).value='');
-    document.getElementById('newPriority').value='M'; document.getElementById('newStatus').value='待处理'; renderIssueTable();
-  }
+  
+  function calcBarStyle(s,e,td){let rs=document.getElementById('rangeStart').value,re=document.getElementById('rangeEnd').value;if(!rs||!e)return{left:'0px',width:'40px',text:''};let total=new Date(re)-new Date(rs),start=new Date(s)-new Date(rs),end=new Date(e)-new Date(rs);if(total<=0)return{left:'0px',width:'40px',text:''};let w=td?(td.offsetWidth-16):400,leftP=Math.max(0,start/total),endP=Math.min(1,end/total),wP=Math.max(0.04,endP-leftP);return{left:(leftP*w).toFixed(0)+'px',width:Math.max(36,(wP*w)).toFixed(0)+'px',text:s+' ~ '+e};}
+  function renderGantt(){let tbody=document.getElementById('ganttTableBody');tbody.innerHTML=ganttData.map((item,idx)=>{let tc=item.type==='milestone'?'tag-milestone':'tag-phase',tl=item.type==='milestone'?'⭐ 里程碑':'📋 阶段'+(idx+1);return'<tr><td>'+(idx+1)+'</td><td><span class="phase-tag '+tc+'">'+(item.type==='milestone'?'⭐':'📋')+'</span></td><td><span contenteditable="true" data-id="'+item.id+'" onblur="updateGanttField('+item.id+',\'name\',this.innerText)">'+item.name+'</span></td><td><input type="date" class="date-input" value="'+item.start+'" onchange="updateGanttField('+item.id+',\'start\',this.value)"></td><td><input type="date" class="date-input" value="'+item.end+'" onchange="updateGanttField('+item.id+',\'end\',this.value)"></td><td class="gantt-bar-cell"><div class="gantt-bar bar-phase" data-gantt-bar="'+item.id+'" title="'+item.start+' ~ '+item.end+'"></div></td><td><select class="status-select" onchange="updateGanttField('+item.id+',\'status\',this.value)"><option '+(item.status==='计划'?'selected':'')+'>计划</option><option '+(item.status==='进行中'?'selected':'')+'>进行中</option><option '+(item.status==='已完成'?'selected':'')+'>已完成</option><option '+(item.status==='延期'?'selected':'')+'>延期</option></select></td><td><button class="btn-del" onclick="deleteGanttRow('+item.id+')">🗑️</button></td></tr>';}).join('');requestAnimationFrame(updateBars);}
+  function updateBars(){ganttData.forEach(item=>{let bar=document.querySelector('[data-gantt-bar="'+item.id+'"]');if(!bar)return;let td=bar.closest('[data-bar-cell]')||bar.parentElement,style=calcBarStyle(item.start,item.end,td);bar.style.left=style.left;bar.style.width=style.width;bar.title=style.text;if(item.type==='milestone'){bar.className='gantt-bar bar-milestone';bar.textContent='◆ '+item.name;}else{bar.className='gantt-bar '+(item.status==='进行中'?'bar-inprogress':'bar-phase');bar.textContent=style.text;}});}
+  function updateGanttField(id,field,value){let item=ganttData.find(i=>i.id===id);if(!item)return;item[field]=field==='name'?value:value;if(field==='start'||field==='end')requestAnimationFrame(updateBars);}
+  function deleteGanttRow(id){if(!confirm('确认删除？'))return;ganttData=ganttData.filter(i=>i.id!==id);renderGantt();}
+  function addGanttPhase(){let s=document.getElementById('rangeStart').value||'2026-05-01',d=new Date(s);d.setDate(d.getDate()+15);ganttData.push({id:ganttNextId++,type:'phase',name:'新阶段',start:s,end:d.toISOString().slice(0,10),status:'计划'});renderGantt();}
+  function addGanttMilestone(){let s=document.getElementById('rangeStart').value||'2026-05-01';ganttData.push({id:ganttNextId++,type:'milestone',name:'新里程碑',start:s,end:s,status:'计划'});renderGantt();}
+  function renderIssueTable(){let sf=document.getElementById('filterStatus').value,pf=document.getElementById('filterPriority').value,filtered=issues.filter(i=>(sf==='all'||i.status===sf)&&(pf==='all'||i.priority===pf)),tbody=document.getElementById('issueTableBody'),empty=document.getElementById('emptyState');if(filtered.length===0){empty.style.display='block';tbody.innerHTML='';}else{empty.style.display='none';tbody.innerHTML=filtered.map(item=>{let pc=item.priority==='H'?'priority-H':(item.priority==='M'?'priority-M':'priority-L'),pl=item.priority==='H'?'🔴 高':(item.priority==='M'?'🟡 中':'🟢 低');return'<tr><td>'+item.id+'</td><td>'+item.device+'</td><td>'+item.type+'</td><td style="text-align:left;">'+item.desc+'</td><td><span class="'+pc+'">'+pl+'</span></td><td><span class="status-badge-sm status-'+item.status+'">'+item.status+'</span></td><td>'+item.owner+'</td><td style="text-align:left;">'+item.note+'</td><td><button class="btn-del" onclick="deleteIssueRow('+item.id+')">🗑️</button></td></tr>';}).join('');}document.getElementById('totalCount').textContent=issues.length;document.getElementById('highCount').textContent=issues.filter(i=>i.priority==='H').length;document.getElementById('midCount').textContent=issues.filter(i=>i.priority==='M').length;document.getElementById('resolvedCount').textContent=issues.filter(i=>i.status==='已解决'||i.status==='已关闭').length;document.getElementById('openCount').textContent=issues.filter(i=>i.status==='待处理'||i.status==='处理中'||i.status==='延期').length;}
+  function addIssueRow(){let d={device:document.getElementById('newDevice').value.trim(),type:document.getElementById('newType').value,desc:document.getElementById('newDesc').value.trim(),priority:document.getElementById('newPriority').value,status:document.getElementById('newStatus').value,owner:document.getElementById('newOwner').value.trim(),note:document.getElementById('newNote').value.trim()};if(!d.device||!d.desc){alert('请填写设备名称和描述');return;}issues.push({id:issueNextId++,...d});['newDevice','newDesc','newOwner','newNote'].forEach(id=>document.getElementById(id).value='');document.getElementById('newType').value='';document.getElementById('newPriority').value='M';document.getElementById('newStatus').value='待处理';renderIssueTable();}
   function deleteIssueRow(id){if(!confirm('确认删除？'))return;issues=issues.filter(i=>i.id!==id);renderIssueTable();}
   function clearFilters(){document.getElementById('filterStatus').value='all';document.getElementById('filterPriority').value='all';renderIssueTable();}
   window.addEventListener('resize',()=>requestAnimationFrame(updateBars));
-
-  async function saveToGitHub() {
-    const token = document.getElementById('githubToken').value.trim();
-    const repo = document.getElementById('githubRepo').value.trim();
-    const path = document.getElementById('githubPath').value.trim() || "index.html";
-    if (!token || !repo) { alert("请填写 GitHub Token 和仓库地址"); return; }
-    const html = document.documentElement.outerHTML;
-    const content = btoa(unescape(encodeURIComponent(html)));
-    try {
-      const res = await fetch(\`https://api.github.com/repos/\${repo}/contents/\${path}\`, {
-        method: 'PUT',
-        headers: { 'Authorization': \`token \${token}\`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: '更新调试管理清单数据', content: content })
-      });
-      const data = await res.json();
-      if (res.ok) alert('✅ 同步成功！');
-      else alert('❌ 同步失败：' + data.message);
-    } catch (e) { alert('网络错误：' + e.message); }
-  }
-
-  renderGantt(); renderIssueTable();
+  async function saveToGitHub(){let token=document.getElementById('githubToken').value.trim(),repo=document.getElementById('githubRepo').value.trim(),path=document.getElementById('githubPath').value.trim()||'index.html';if(!token||!repo){alert('请填写 Token 和仓库');return;}let html='<!DOCTYPE html>\\n'+document.documentElement.outerHTML;let content=btoa(unescape(encodeURIComponent(html)));try{let res=await fetch('https://api.github.com/repos/'+repo+'/contents/'+path,{method:'PUT',headers:{'Authorization':'token '+token,'Content-Type':'application/json'},body:JSON.stringify({message:'更新设备调试管理清单数据',content:content})}),data=await res.json();if(res.ok)alert('✅ 同步成功！');else alert('❌ 失败：'+data.message);}catch(e){alert('网络错误：'+e.message);}}
+  renderGantt();renderIssueTable();
 </script>
 </body>
 </html>`;
-
-    // Base64 编码
-    const content = btoa(unescape(encodeURIComponent(fullHtml)));
-
-    try {
-      const response = await fetch(`https://api.github.com/repos/${repo}/contents/${path}`, {
-        method: 'PUT',
-        headers: {
-          'Authorization': `token ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          message: '更新设备调试管理清单数据',
-          content: content
-        })
-      });
-      const result = await response.json();
-      if (response.ok) {
-        alert('✅ 同步成功！数据已保存到 GitHub');
-      } else {
-        alert('❌ 同步失败：' + result.message);
-      }
-    } catch (err) {
-      alert('网络错误：' + err.message);
     }
-  }
 
-  renderGantt();
-  renderIssueTable();
+    // 首次加载
+    renderGantt();
+    renderIssueTable();
 </script>
 </body>
 </html>
